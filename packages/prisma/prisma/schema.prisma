@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusAprovacao {
+  pendente
+  aprovado
+  rejeitado
+
+  @@map("status_aprovacao")
+}
+
+enum StatusSolicitacao {
+  aguardando_autonomo
+  aceito_pelo_autonomo
+  recusado_pelo_autonomo
+  visita_agendada
+  orcamento_enviado
+  orcamento_aceito
+  orcamento_recusado
+  pago
+  em_andamento
+  concluido
+  cancelado
+  em_disputa
+
+  @@map("status_solicitacao")
+}
+
+enum StatusOrcamento {
+  pendente
+  aceito
+  recusado
+
+  @@map("status_orcamento")
+}
+
+enum StatusPagamento {
+  retido
+  liberado
+  reembolsado
+  cancelado
+
+  @@map("status_pagamento")
+}
+
+enum StatusCancelamento {
+  pendente_analise
+  aprovado
+  rejeitado
+
+  @@map("status_cancelamento")
+}
+
+enum Canal {
+  push
+  email
+  whatsapp
+
+  @@map("canal")
+}
+
+model Usuario {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome                    String
+  email                   String   @unique
+  senhaHash               String?  @map("senha_hash")
+  googleId                String?  @unique @map("google_id")
+  cpf                     String   @unique
+  telefone                String?
+  fotoUrl                 String?  @map("foto_url")
+  isCliente               Boolean  @default(true) @map("is_cliente")
+  isAutonomo              Boolean  @default(false) @map("is_autonomo")
+  isAdmin                 Boolean  @default(false) @map("is_admin")
+  avaliacaoMediaCliente   Decimal  @default(0) @map("avaliacao_media_cliente") @db.Decimal(2, 1)
+  avaliacaoMediaAutonomo  Decimal  @default(0) @map("avaliacao_media_autonomo") @db.Decimal(2, 1)
+  ativo                   Boolean  @default(true)
+  criadoEm                DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm            DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  enderecos                     Endereco[]
+  perfilAutonomo                PerfilAutonomo?
+  solicitacoesComoCliente       Solicitacao[]         @relation("SolicitacaoCliente")
+  solicitacoesComoAutonomo      Solicitacao[]         @relation("SolicitacaoAutonomo")
+  mensagensEnviadas             MensagemChat[]
+  avaliacoesFeitas              Avaliacao[]           @relation("AvaliacaoAvaliador")
+  avaliacoesRecebidas           Avaliacao[]           @relation("AvaliacaoAvaliado")
+  cancelamentosSolicitados      Cancelamento[]        @relation("CancelamentoSolicitante")
+  cancelamentosAnalisados       Cancelamento[]        @relation("CancelamentoAnalista")
+  notificacoes                  Notificacao[]
+  solicitacoesAutonomo          SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoUsuario")
+  solicitacoesAutonomoAnalises  SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoAnalista")
+
+  @@map("usuarios")
+}
+
+model Endereco {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  rua           String
+  numero        String?
+  complemento   String?
+  bairro        String
+  cidade        String
+  estado        String
+  cep           String
+  latitude      Decimal  @db.Decimal(10, 7)
+  longitude     Decimal  @db.Decimal(10, 7)
+  principal     Boolean? @default(true)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  usuario      Usuario       @relation(fields: [usuarioId], references: [id])
+  solicitacoes Solicitacao[]
+
+  @@index([usuarioId], map: "idx_enderecos_usuario")
+  @@map("enderecos")
+}
+
+model Categoria {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome   String  @unique
+  ativo  Boolean @default(true)
+
+  autonomos    AutonomoCategoria[]
+  solicitacoes Solicitacao[]
+
+  @@map("categorias")
+}
+
+model PerfilAutonomo {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String          @unique @map("usuario_id") @db.Uuid
+  cnpj                String          @unique
+  razaoSocial         String          @map("razao_social")
+  documentoCnpjUrl    String          @map("documento_cnpj_url")
+  statusAprovacao     StatusAprovacao @default(pendente) @map("status_aprovacao")
+  online              Boolean         @default(false)
+  latitudeAtual       Decimal?        @map("latitude_atual") @db.Decimal(10, 7)
+  longitudeAtual      Decimal?        @map("longitude_atual") @db.Decimal(10, 7)
+  criadoEm            DateTime        @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  usuario    Usuario              @relation(fields: [usuarioId], references: [id])
+  categorias AutonomoCategoria[]
+
+  @@map("perfis_autonomos")
+}
+
+model AutonomoCategoria {
+  autonomoId  String @map("autonomo_id") @db.Uuid
+  categoriaId String @map("categoria_id") @db.Uuid
+
+  autonomo  PerfilAutonomo @relation(fields: [autonomoId], references: [id])
+  categoria Categoria      @relation(fields: [categoriaId], references: [id])
+
+  @@id([autonomoId, categoriaId])
+  @@map("autonomo_categorias")
+}
+
+model Solicitacao {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId       String            @map("cliente_id") @db.Uuid
+  autonomoId      String?           @map("autonomo_id") @db.Uuid
+  categoriaId     String            @map("categoria_id") @db.Uuid
+  enderecoId      String            @map("endereco_id") @db.Uuid
+  descricao       String
+  disponibilidade Json
+  status          StatusSolicitacao @default(aguardando_autonomo)
+  // Confirmação individual de conclusão (requisito 24/25): o status só
+  // avança para "concluido" quando ambas as datas estiverem preenchidas.
+  concluidoClienteEm  DateTime?     @map("concluido_cliente_em") @db.Timestamptz(6)
+  concluidoAutonomoEm DateTime?     @map("concluido_autonomo_em") @db.Timestamptz(6)
+  criadoEm        DateTime          @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm    DateTime          @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  cliente       Usuario             @relation("SolicitacaoCliente", fields: [clienteId], references: [id])
+  autonomo      Usuario?            @relation("SolicitacaoAutonomo", fields: [autonomoId], references: [id])
+  categoria     Categoria           @relation(fields: [categoriaId], references: [id])
+  endereco      Endereco            @relation(fields: [enderecoId], references: [id])
+  fotos         SolicitacaoFoto[]
+  visitaTecnica VisitaTecnica?
+  orcamentos    Orcamento[]
+  pagamento     Pagamento?
+  mensagens     MensagemChat[]
+  avaliacoes    Avaliacao[]
+  cancelamentos Cancelamento[]
+
+  @@index([clienteId], map: "idx_solicitacoes_cliente")
+  @@index([autonomoId], map: "idx_solicitacoes_autonomo")
+  @@index([status], map: "idx_solicitacoes_status")
+  @@map("solicitacoes")
+}
+
+model SolicitacaoFoto {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId  String @map("solicitacao_id") @db.Uuid
+  url            String
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+
+  @@map("solicitacao_fotos")
+}
+
+model VisitaTecnica {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId  String   @unique @map("solicitacao_id") @db.Uuid
+  dataHora       DateTime @map("data_hora") @db.Timestamptz(6)
+  observacoes    String?
+  realizada      Boolean  @default(false)
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+
+  @@map("visitas_tecnicas")
+}
+
+model Orcamento {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId String          @map("solicitacao_id") @db.Uuid
+  valor         Decimal         @db.Decimal(10, 2)
+  descricao     String?
+  status        StatusOrcamento @default(pendente)
+  criadoEm      DateTime        @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+
+  @@map("orcamentos")
+}
+
+model Pagamento {
+  id                        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId             String          @unique @map("solicitacao_id") @db.Uuid
+  valorTotal                Decimal         @map("valor_total") @db.Decimal(10, 2)
+  taxaPlataformaPercentual  Decimal         @default(2.00) @map("taxa_plataforma_percentual") @db.Decimal(4, 2)
+  taxaPlataformaValor       Decimal         @map("taxa_plataforma_valor") @db.Decimal(10, 2)
+  valorAutonomo             Decimal         @map("valor_autonomo") @db.Decimal(10, 2)
+  stoneTransactionId        String?         @map("stone_transaction_id")
+  status                    StatusPagamento @default(retido)
+  criadoEm                  DateTime        @default(now()) @map("criado_em") @db.Timestamptz(6)
+  liberadoEm                DateTime?       @map("liberado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+
+  @@map("pagamentos")
+}
+
+model MensagemChat {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId String   @map("solicitacao_id") @db.Uuid
+  remetenteId   String   @map("remetente_id") @db.Uuid
+  mensagem      String
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+  remetente   Usuario     @relation(fields: [remetenteId], references: [id])
+
+  @@index([solicitacaoId], map: "idx_mensagens_solicitacao")
+  @@map("mensagens_chat")
+}
+
+model Avaliacao {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId String   @map("solicitacao_id") @db.Uuid
+  avaliadorId   String   @map("avaliador_id") @db.Uuid
+  avaliadoId    String   @map("avaliado_id") @db.Uuid
+  nota          Int
+  comentario    String?
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+  avaliador   Usuario     @relation("AvaliacaoAvaliador", fields: [avaliadorId], references: [id])
+  avaliado    Usuario     @relation("AvaliacaoAvaliado", fields: [avaliadoId], references: [id])
+
+  @@index([avaliadoId], map: "idx_avaliacoes_avaliado")
+  @@map("avaliacoes")
+}
+
+model Cancelamento {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId        String             @map("solicitacao_id") @db.Uuid
+  solicitadoPor        String             @map("solicitado_por") @db.Uuid
+  motivo               String
+  dentroDoPrazo        Boolean?           @map("dentro_do_prazo")
+  taxaAplicada         Decimal?           @map("taxa_aplicada") @db.Decimal(10, 2)
+  reembolsoTotal       Boolean            @default(false) @map("reembolso_total")
+  status               StatusCancelamento @default(pendente_analise)
+  analisadoPorAdminId  String?            @map("analisado_por_admin_id") @db.Uuid
+  criadoEm             DateTime           @default(now()) @map("criado_em") @db.Timestamptz(6)
+  resolvidoEm          DateTime?          @map("resolvido_em") @db.Timestamptz(6)
+
+  solicitacao      Solicitacao @relation(fields: [solicitacaoId], references: [id])
+  solicitante      Usuario     @relation("CancelamentoSolicitante", fields: [solicitadoPor], references: [id])
+  analisadoPorAdmin Usuario?   @relation("CancelamentoAnalista", fields: [analisadoPorAdminId], references: [id])
+
+  @@map("cancelamentos")
+}
+
+model Notificacao {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  tipo       String
+  titulo     String
+  mensagem   String
+  canal      Canal
+  lida       Boolean  @default(false)
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId], map: "idx_notificacoes_usuario")
+  @@map("notificacoes")
+}
+
+model SolicitacaoAutonomo {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String          @map("usuario_id") @db.Uuid
+  cnpj                String
+  documentoCnpjUrl    String          @map("documento_cnpj_url")
+  status              StatusAprovacao @default(pendente)
+  analisadoPorAdminId String?         @map("analisado_por_admin_id") @db.Uuid
+  criadoEm            DateTime        @default(now()) @map("criado_em") @db.Timestamptz(6)
+  resolvidoEm         DateTime?       @map("resolvido_em") @db.Timestamptz(6)
+
+  usuario           Usuario  @relation("SolicitacaoAutonomoUsuario", fields: [usuarioId], references: [id])
+  analisadoPorAdmin Usuario? @relation("SolicitacaoAutonomoAnalista", fields: [analisadoPorAdminId], references: [id])
+
+  @@map("solicitacoes_autonomo")
+}

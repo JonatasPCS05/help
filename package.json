@@ -1,0 +1,23 @@
+{
+  "name": "help",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "build": "npm run build --workspaces --if-present",
+    "prisma:generate": "npm run generate --workspace=packages/prisma",
+    "prisma:migrate": "npm run migrate --workspace=packages/prisma",
+    "prisma:studio": "npm run studio --workspace=packages/prisma",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

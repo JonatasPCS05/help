@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Help",
+    "slug": "help-marketplace",
+    "scheme": "help",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FBF9F6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.help.app"
+    },
+    "android": {
+      "package": "br.com.help.app"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}

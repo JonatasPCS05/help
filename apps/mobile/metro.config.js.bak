@@ -1,0 +1,25 @@
+const { getDefaultConfig } = require("expo/metro-config");
+const path = require("path");
+
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, "../..");
+
+const config = getDefaultConfig(projectRoot);
+
+// Monorepo: o Metro também enxerga o node_modules da raiz (onde o admin
+// tem react@18.x), então sem isso ele pode carregar duas cópias de React
+// ao mesmo tempo ("Invalid hook call"). Fixamos react/react-native pra
+// cópia local do app, sem desabilitar a busca hierárquica padrão — que é
+// necessária pra resolver pacotes aninhados (ex.: expo-asset dentro de
+// node_modules/expo/node_modules).
+config.watchFolders = [workspaceRoot];
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, "node_modules"),
+  path.resolve(workspaceRoot, "node_modules"),
+];
+config.resolver.extraNodeModules = {
+  react: path.resolve(projectRoot, "node_modules/react"),
+  "react-native": path.resolve(projectRoot, "node_modules/react-native"),
+};
+
+module.exports = config;
