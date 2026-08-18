@@ -115,6 +115,58 @@ solicitacoesRouter.get("/me", async (req, res, next) => {
   }
 });
 
+// Requisitos 11-14: solicitações aguardando autônomo, filtradas por
+// categoria atendida e raio de distância do autônomo autenticado.
+solicitacoesRouter.get("/disponiveis", exigirRole("autonomo"), async (req, res, next) => {
+  try {
+    const perfil = await prisma.perfilAutonomo.findUnique({
+      where: { usuarioId: req.user!.sub },
+      include: { categorias: true },
+    });
+
+    if (!perfil || perfil.statusAprovacao !== "aprovado") {
+      return res.json([]);
+    }
+    if (perfil.latitudeAtual === null || perfil.longitudeAtual === null) {
+      return res.json([]);
+    }
+
+    const categoriaIds = perfil.categorias.map((c) => c.categoriaId);
+    if (categoriaIds.length === 0) {
+      return res.json([]);
+    }
+
+    const candidatas = await prisma.solicitacao.findMany({
+      where: {
+        status: "aguardando_autonomo",
+        categoriaId: { in: categoriaIds },
+        recusas: { none: { autonomoId: req.user!.sub } },
+      },
+      include: {
+        categoria: true,
+        endereco: true,
+        fotos: true,
+        cliente: { select: { id: true, nome: true, avaliacaoMediaCliente: true } },
+      },
+      orderBy: { criadoEm: "desc" },
+    });
+
+    const disponiveis = candidatas.filter(
+      (solicitacao) =>
+        distanciaKm(
+          Number(perfil.latitudeAtual),
+          Number(perfil.longitudeAtual),
+          Number(solicitacao.endereco.latitude),
+          Number(solicitacao.endereco.longitude)
+        ) <= RAIO_BUSCA_KM
+    );
+
+    res.json(disponiveis);
+  } catch (error) {
+    next(error);
+  }
+});
+
 solicitacoesRouter.get("/:id", async (req, res, next) => {
   try {
     const solicitacao = await buscarSolicitacaoDoUsuario(req.params.id, req.user!.sub);
@@ -158,12 +210,20 @@ solicitacoesRouter.post("/:id/aceitar", exigirRole("autonomo"), async (req, res,
   }
 });
 
-// Recusa individual: não altera a solicitação (outros autônomos elegíveis
-// continuam podendo aceitar), apenas confirma o descarte para este autônomo.
+// Recusa individual: não altera o status da solicitação (outros autônomos
+// elegíveis continuam podendo aceitar), só registra que ESTE autônomo já
+// recusou, pra ela parar de aparecer nas disponíveis dele.
 solicitacoesRouter.post("/:id/recusar", exigirRole("autonomo"), async (req, res, next) => {
   try {
     const solicitacao = await prisma.solicitacao.findUnique({ where: { id: req.params.id } });
     if (!solicitacao) throw new ApiHttpError(404, "nao_encontrada", "Solicitação não encontrada");
+
+    await prisma.solicitacaoRecusa.upsert({
+      where: { solicitacaoId_autonomoId: { solicitacaoId: solicitacao.id, autonomoId: req.user!.sub } },
+      update: {},
+      create: { solicitacaoId: solicitacao.id, autonomoId: req.user!.sub },
+    });
+
     res.json({ ok: true });
   } catch (error) {
     next(error);

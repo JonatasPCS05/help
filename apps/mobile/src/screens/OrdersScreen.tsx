@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
+import { labelStatus } from "@/lib/status";
 
 interface Solicitacao {
   id: string;
@@ -13,34 +14,46 @@ interface Solicitacao {
   criadoEm: string;
 }
 
-const ABAS = [
+const ABAS_CLIENTE = [
   { chave: "aberto", label: "Em aberto", status: ["aguardando_autonomo", "aceito_pelo_autonomo", "visita_agendada", "orcamento_enviado"] },
   { chave: "andamento", label: "Em andamento", status: ["orcamento_aceito", "pago", "em_andamento"] },
   { chave: "concluido", label: "Concluído", status: ["concluido"] },
   { chave: "cancelado", label: "Cancelado", status: ["cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "em_disputa"] },
 ];
 
-export function OrdersScreen() {
-  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
-  const [abaAtiva, setAbaAtiva] = useState(ABAS[0]);
+const ABAS_AUTONOMO = [
+  { chave: "aberto", label: "Aceitos", status: ["aceito_pelo_autonomo", "visita_agendada", "orcamento_enviado", "orcamento_aceito"] },
+  { chave: "andamento", label: "Em andamento", status: ["pago", "em_andamento"] },
+  { chave: "concluido", label: "Concluído", status: ["concluido"] },
+  { chave: "cancelado", label: "Cancelado", status: ["cancelado", "em_disputa"] },
+];
 
-  // Recarrega sempre que a aba ganha foco (ex.: voltando de "Nova Solicitação"),
-  // não só na primeira montagem — evita ter que sair e entrar no app pra ver
-  // um pedido recém-criado.
+interface Props {
+  papel?: "cliente" | "autonomo";
+}
+
+export function OrdersScreen({ papel = "cliente" }: Props) {
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const abas = papel === "autonomo" ? ABAS_AUTONOMO : ABAS_CLIENTE;
+  const [abaAtiva, setAbaAtiva] = useState(abas[0]);
+
+  // Recarrega sempre que a aba ganha foco (ex.: voltando de "Nova Solicitação"
+  // ou depois de aceitar um pedido), não só na primeira montagem — evita ter
+  // que sair e entrar no app pra ver a lista atualizada.
   useFocusEffect(
     useCallback(() => {
-      apiFetch<Solicitacao[]>("/solicitacoes/me?papel=cliente").then(setSolicitacoes).catch(() => setSolicitacoes([]));
-    }, [])
+      apiFetch<Solicitacao[]>(`/solicitacoes/me?papel=${papel}`).then(setSolicitacoes).catch(() => setSolicitacoes([]));
+    }, [papel])
   );
 
   const filtradas = solicitacoes.filter((s) => abaAtiva.status.includes(s.status));
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.titulo}>Meus Pedidos</Text>
+      <Text style={styles.titulo}>{papel === "autonomo" ? "Meus Trabalhos" : "Meus Pedidos"}</Text>
 
       <View style={styles.abas}>
-        {ABAS.map((aba) => (
+        {abas.map((aba) => (
           <TouchableOpacity key={aba.chave} onPress={() => setAbaAtiva(aba)}>
             <Text style={[styles.aba, abaAtiva.chave === aba.chave && styles.abaAtiva]}>{aba.label}</Text>
           </TouchableOpacity>
@@ -53,7 +66,10 @@ export function OrdersScreen() {
         contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.badge}>{item.categoria.nome}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.badge}>{item.categoria.nome}</Text>
+              <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
+            </View>
             <Text style={styles.descricao} numberOfLines={2}>
               {item.descricao}
             </Text>
@@ -72,6 +88,7 @@ const styles = StyleSheet.create({
   aba: { color: colors.muted, fontWeight: "600", paddingBottom: spacing.xs },
   abaAtiva: { color: colors.primary, borderBottomWidth: 2, borderBottomColor: colors.primary },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
   badge: {
     alignSelf: "flex-start",
     backgroundColor: colors.secondaryLight,
@@ -81,8 +98,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
-    marginBottom: spacing.xs,
   },
+  statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
 });

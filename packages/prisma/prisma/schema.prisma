@@ -95,6 +95,7 @@ model Usuario {
   notificacoes                  Notificacao[]
   solicitacoesAutonomo          SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoUsuario")
   solicitacoesAutonomoAnalises  SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoAnalista")
+  solicitacoesRecusadas         SolicitacaoRecusa[]
 
   @@map("usuarios")
 }
@@ -189,10 +190,28 @@ model Solicitacao {
   avaliacoes    Avaliacao[]
   cancelamentos Cancelamento[]
 
+  recusas       SolicitacaoRecusa[]
+
   @@index([clienteId], map: "idx_solicitacoes_cliente")
   @@index([autonomoId], map: "idx_solicitacoes_autonomo")
   @@index([status], map: "idx_solicitacoes_status")
   @@map("solicitacoes")
+}
+
+// Registra quando um autônomo recusa uma solicitação (requisito 13), pra
+// não oferecer a mesma solicitação de novo pra quem já recusou, mesmo que
+// ela continue disponível pra outros autônomos elegíveis.
+model SolicitacaoRecusa {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId String   @map("solicitacao_id") @db.Uuid
+  autonomoId    String   @map("autonomo_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  solicitacao Solicitacao @relation(fields: [solicitacaoId], references: [id])
+  autonomo    Usuario     @relation(fields: [autonomoId], references: [id])
+
+  @@unique([solicitacaoId, autonomoId])
+  @@map("solicitacao_recusas")
 }
 
 model SolicitacaoFoto {
