@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
 WORKDIR /repo
 
 FROM base AS deps
@@ -15,10 +16,10 @@ RUN npm run generate --workspace=packages/prisma
 RUN npm run build --workspace=apps/api
 
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /repo
 ENV NODE_ENV=production
 COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
 COPY --from=build /repo/packages ./packages
 COPY --from=build /repo/apps/api/package.json ./apps/api/package.json

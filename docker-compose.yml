@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-help}
       POSTGRES_DB: ${POSTGRES_DB:-help}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - help_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -31,5 +31,38 @@ services:
     ports:
       - "${API_PORT:-3333}:3333"
 
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3333}
+    container_name: help_admin
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${ADMIN_PORT:-3001}:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: help_caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+      - admin
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./downloads:/srv/downloads
+      - caddy_data:/data
+      - caddy_config:/config
+    profiles:
+      - proxy
+
 volumes:
   help_postgres_data:
+  caddy_data:
+  caddy_config:

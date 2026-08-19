@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+dist
+**/dist
+.next
+**/.next
+apps/mobile/android
+apps/mobile/.expo
+*.apk
+.env
+.env.local

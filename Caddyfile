@@ -1,0 +1,11 @@
+api.jonatasteste.com.br {
+	handle_path /app/* {
+		root * /srv/downloads
+		file_server
+	}
+	reverse_proxy api:3333
+}
+
+admin.jonatasteste.com.br {
+	reverse_proxy admin:3000
+}
