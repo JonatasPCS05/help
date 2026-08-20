@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
+import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 interface SolicitacaoDisponivel {
   id: string;
@@ -45,57 +46,59 @@ export function IncomingRequestsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.titulo}>Solicitações Recebidas</Text>
-      <Text style={styles.subtitulo}>
-        {carregando
-          ? "Carregando..."
-          : `Você tem ${solicitacoes.length} pedido(s) de serviço próximos a você.`}
-      </Text>
+      <ResponsiveContent>
+        <Text style={styles.titulo}>Solicitações Recebidas</Text>
+        <Text style={styles.subtitulo}>
+          {carregando
+            ? "Carregando..."
+            : `Você tem ${solicitacoes.length} pedido(s) de serviço próximos a você.`}
+        </Text>
 
-      {erro && <Text style={styles.erro}>{erro}</Text>}
+        {erro && <Text style={styles.erro}>{erro}</Text>}
 
-      <FlatList
-        data={solicitacoes}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
-        onRefresh={carregar}
-        refreshing={carregando}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.clienteNome}>{item.cliente.nome}</Text>
-              <Text style={styles.nota}>★ {Number(item.cliente.avaliacaoMediaCliente).toFixed(1)}</Text>
+        <FlatList
+          data={solicitacoes}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
+          onRefresh={carregar}
+          refreshing={carregando}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.clienteNome}>{item.cliente.nome}</Text>
+                <Text style={styles.nota}>★ {Number(item.cliente.avaliacaoMediaCliente).toFixed(1)}</Text>
+              </View>
+              <Text style={styles.badge}>{item.categoria.nome}</Text>
+              <Text style={styles.local}>
+                {item.endereco.bairro} - {item.endereco.cidade}
+              </Text>
+              <Text style={styles.descricao} numberOfLines={3}>
+                {item.descricao}
+              </Text>
+
+              <View style={styles.botoes}>
+                <TouchableOpacity
+                  style={styles.botaoRecusar}
+                  onPress={() => responder(item.id, false)}
+                  disabled={processandoId === item.id}
+                >
+                  <Text style={styles.botaoRecusarTexto}>Recusar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.botaoAceitar}
+                  onPress={() => responder(item.id, true)}
+                  disabled={processandoId === item.id}
+                >
+                  <Text style={styles.botaoAceitarTexto}>Aceitar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <Text style={styles.badge}>{item.categoria.nome}</Text>
-            <Text style={styles.local}>
-              {item.endereco.bairro} - {item.endereco.cidade}
-            </Text>
-            <Text style={styles.descricao} numberOfLines={3}>
-              {item.descricao}
-            </Text>
-
-            <View style={styles.botoes}>
-              <TouchableOpacity
-                style={styles.botaoRecusar}
-                onPress={() => responder(item.id, false)}
-                disabled={processandoId === item.id}
-              >
-                <Text style={styles.botaoRecusarTexto}>Recusar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.botaoAceitar}
-                onPress={() => responder(item.id, true)}
-                disabled={processandoId === item.id}
-              >
-                <Text style={styles.botaoAceitarTexto}>Aceitar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          !carregando ? <Text style={styles.vazio}>Nenhuma solicitação disponível no momento.</Text> : null
-        }
-      />
+          )}
+          ListEmptyComponent={
+            !carregando ? <Text style={styles.vazio}>Nenhuma solicitação disponível no momento.</Text> : null
+          }
+        />
+      </ResponsiveContent>
     </SafeAreaView>
   );
 }

@@ -1,14 +1,17 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "@/theme";
+import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 export function ChatListScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.titulo}>Chat</Text>
-      <Text style={styles.vazio}>
-        As conversas de cada solicitação aparecem aqui assim que um orçamento for aceito.
-      </Text>
+      <ResponsiveContent>
+        <Text style={styles.titulo}>Chat</Text>
+        <Text style={styles.vazio}>
+          As conversas de cada solicitação aparecem aqui assim que um orçamento for aceito.
+        </Text>
+      </ResponsiveContent>
     </SafeAreaView>
   );
 }

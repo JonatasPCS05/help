@@ -1,16 +1,11 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
-
-function paraDataISO(data: Date): string {
-  const ano = data.getFullYear();
-  const mes = String(data.getMonth() + 1).padStart(2, "0");
-  const dia = String(data.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
-}
+import { paraDataISO } from "@/lib/data";
+import { DatePickerField } from "@/components/DatePickerField";
+import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 interface Categoria {
   id: string;
@@ -43,7 +38,6 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
   const [enderecoId, setEnderecoId] = useState<string | null>(null);
   const [descricao, setDescricao] = useState("");
   const [data, setData] = useState<Date | null>(null);
-  const [mostrarSeletorData, setMostrarSeletorData] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -126,6 +120,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ResponsiveContent>
       <ScrollView>
         <Text style={styles.titulo}>Nova Solicitação</Text>
 
@@ -253,22 +248,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
         />
 
         <Text style={styles.label}>Data preferencial</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setMostrarSeletorData(true)}>
-          <Text style={{ color: data ? colors.ink : colors.muted }}>
-            {data ? paraDataISO(data) : "Toque para escolher a data"}
-          </Text>
-        </TouchableOpacity>
-        {mostrarSeletorData && (
-          <DateTimePicker
-            value={data ?? new Date()}
-            mode="date"
-            minimumDate={new Date()}
-            onChange={(_evento, dataEscolhida) => {
-              setMostrarSeletorData(false);
-              if (dataEscolhida) setData(dataEscolhida);
-            }}
-          />
-        )}
+        <DatePickerField value={data} onChange={setData} minimumDate={new Date()} style={styles.input} />
 
         {erro && <Text style={styles.erro}>{erro}</Text>}
 
@@ -285,6 +265,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </ResponsiveContent>
     </SafeAreaView>
   );
 }

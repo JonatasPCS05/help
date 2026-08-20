@@ -68,7 +68,7 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
-  card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg },
+  card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
   logo: {
     width: 56,
     height: 56,

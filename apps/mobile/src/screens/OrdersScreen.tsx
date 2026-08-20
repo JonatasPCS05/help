@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
 import { labelStatus } from "@/lib/status";
+import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 interface Solicitacao {
   id: string;
@@ -50,33 +51,35 @@ export function OrdersScreen({ papel = "cliente" }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.titulo}>{papel === "autonomo" ? "Meus Trabalhos" : "Meus Pedidos"}</Text>
+      <ResponsiveContent>
+        <Text style={styles.titulo}>{papel === "autonomo" ? "Meus Trabalhos" : "Meus Pedidos"}</Text>
 
-      <View style={styles.abas}>
-        {abas.map((aba) => (
-          <TouchableOpacity key={aba.chave} onPress={() => setAbaAtiva(aba)}>
-            <Text style={[styles.aba, abaAtiva.chave === aba.chave && styles.abaAtiva]}>{aba.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.abas}>
+          {abas.map((aba) => (
+            <TouchableOpacity key={aba.chave} onPress={() => setAbaAtiva(aba)}>
+              <Text style={[styles.aba, abaAtiva.chave === aba.chave && styles.abaAtiva]}>{aba.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <FlatList
-        data={filtradas}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.badge}>{item.categoria.nome}</Text>
-              <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
+        <FlatList
+          data={filtradas}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.badge}>{item.categoria.nome}</Text>
+                <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
+              </View>
+              <Text style={styles.descricao} numberOfLines={2}>
+                {item.descricao}
+              </Text>
             </View>
-            <Text style={styles.descricao} numberOfLines={2}>
-              {item.descricao}
-            </Text>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.vazio}>Nenhum pedido nesta categoria.</Text>}
-      />
+          )}
+          ListEmptyComponent={<Text style={styles.vazio}>Nenhum pedido nesta categoria.</Text>}
+        />
+      </ResponsiveContent>
     </SafeAreaView>
   );
 }

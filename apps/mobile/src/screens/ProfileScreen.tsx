@@ -1,48 +1,49 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing } from "@/theme";
+import { ResponsiveContent } from "@/components/ResponsiveContent";
+import { confirmarAcao } from "@/lib/confirm";
 
 export function ProfileScreen() {
   const { usuario, sair } = useAuth();
 
   function confirmarSaida() {
-    Alert.alert("Sair da conta", "Tem certeza que deseja sair da sua conta?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Sair", style: "destructive", onPress: sair },
-    ]);
+    confirmarAcao("Sair da conta", "Tem certeza que deseja sair da sua conta?", sair);
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarTexto}>{usuario?.nome?.[0]?.toUpperCase() ?? "?"}</Text>
+      <ResponsiveContent>
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarTexto}>{usuario?.nome?.[0]?.toUpperCase() ?? "?"}</Text>
+          </View>
+          <Text style={styles.nome}>{usuario?.nome}</Text>
+          <Text style={styles.nota}>★ {Number(usuario?.avaliacaoMediaCliente ?? 0).toFixed(1)}</Text>
         </View>
-        <Text style={styles.nome}>{usuario?.nome}</Text>
-        <Text style={styles.nota}>★ {Number(usuario?.avaliacaoMediaCliente ?? 0).toFixed(1)}</Text>
-      </View>
 
-      <View style={styles.menu}>
-        <Text style={styles.menuItem}>Editar Perfil</Text>
-        <Text style={styles.menuItem}>Histórico</Text>
-        <Text style={styles.menuItem}>Pagamentos</Text>
-      </View>
-
-      {!usuario?.isAutonomo && (
-        <View style={styles.ctaCard}>
-          <TouchableOpacity style={styles.cta}>
-            <Text style={styles.ctaTexto}>Quero ser Autônomo</Text>
-          </TouchableOpacity>
-          <Text style={styles.ctaSubtitulo}>
-            Cadastre-se como prestador de serviços e aumente sua renda oferecendo seu trabalho para milhares de clientes.
-          </Text>
+        <View style={styles.menu}>
+          <Text style={styles.menuItem}>Editar Perfil</Text>
+          <Text style={styles.menuItem}>Histórico</Text>
+          <Text style={styles.menuItem}>Pagamentos</Text>
         </View>
-      )}
 
-      <TouchableOpacity style={styles.sair} onPress={confirmarSaida}>
-        <Text style={styles.sairTexto}>Sair</Text>
-      </TouchableOpacity>
+        {!usuario?.isAutonomo && (
+          <View style={styles.ctaCard}>
+            <TouchableOpacity style={styles.cta}>
+              <Text style={styles.ctaTexto}>Quero ser Autônomo</Text>
+            </TouchableOpacity>
+            <Text style={styles.ctaSubtitulo}>
+              Cadastre-se como prestador de serviços e aumente sua renda oferecendo seu trabalho para milhares de clientes.
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.sair} onPress={confirmarSaida}>
+          <Text style={styles.sairTexto}>Sair</Text>
+        </TouchableOpacity>
+      </ResponsiveContent>
     </SafeAreaView>
   );
 }

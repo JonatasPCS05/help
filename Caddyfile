@@ -9,3 +9,10 @@ api.jonatasteste.com.br {
 admin.jonatasteste.com.br {
 	reverse_proxy admin:3000
 }
+
+help.jonatasteste.com.br {
+	root * /srv/web
+	encode gzip
+	try_files {path} /index.html
+	file_server
+}

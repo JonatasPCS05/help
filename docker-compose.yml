@@ -57,6 +57,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./downloads:/srv/downloads
+      - ./web-dist:/srv/web
       - caddy_data:/data
       - caddy_config:/config
     profiles:

@@ -14,8 +14,13 @@ const config = getDefaultConfig(projectRoot);
 // `extraNodeModules` não resolve isso: ele só é consultado quando a
 // resolução normal FALHA, e aqui ela "funciona", só que aponta pro React
 // errado. É preciso interceptar a resolução ativamente.
+const PACOTES_FORCADOS_LOCAL = ["react", "react-dom", "scheduler"];
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === "react" || moduleName.startsWith("react/")) {
+  const forcar = PACOTES_FORCADOS_LOCAL.some(
+    (pacote) => moduleName === pacote || moduleName.startsWith(`${pacote}/`)
+  );
+  if (forcar) {
     return context.resolveRequest(
       { ...context, originModulePath: path.join(projectRoot, "package.json") },
       moduleName,
