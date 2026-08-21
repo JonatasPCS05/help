@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
@@ -66,7 +67,10 @@ export function IncomingRequestsScreen() {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.clienteNome}>{item.cliente.nome}</Text>
-                <Text style={styles.nota}>★ {Number(item.cliente.avaliacaoMediaCliente).toFixed(1)}</Text>
+                <View style={styles.nota}>
+                  <Ionicons name="star" size={13} color={colors.secondary} />
+                  <Text style={styles.notaTexto}>{Number(item.cliente.avaliacaoMediaCliente).toFixed(1)}</Text>
+                </View>
               </View>
               <Text style={styles.badge}>{item.categoria.nome}</Text>
               <Text style={styles.local}>
@@ -111,7 +115,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   clienteNome: { fontWeight: "700", color: colors.ink },
-  nota: { color: colors.secondary, fontWeight: "600" },
+  nota: { flexDirection: "row", alignItems: "center", gap: 4 },
+  notaTexto: { color: colors.secondary, fontWeight: "600" },
   badge: {
     alignSelf: "flex-start",
     backgroundColor: colors.primaryLight,

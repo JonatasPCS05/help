@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Help — Admin Central",
-  description: "Painel administrativo do Help Marketplace",
+  description: "Painel administrativo do Help",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

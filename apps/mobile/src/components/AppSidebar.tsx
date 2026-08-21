@@ -1,11 +1,12 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing } from "@/theme";
 
 export interface SidebarItem {
   chave: string;
   label: string;
-  icone: string;
+  icone: keyof typeof Ionicons.glyphMap;
 }
 
 interface Props {
@@ -42,7 +43,12 @@ export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
                 onPress={() => onSelecionar(item.chave)}
                 style={[styles.item, ativoAtual && styles.itemAtivo]}
               >
-                <Text style={styles.itemIcone}>{item.icone}</Text>
+                <Ionicons
+                  name={item.icone}
+                  size={18}
+                  color={ativoAtual ? colors.white : colors.ink}
+                  style={styles.itemIcone}
+                />
                 <Text style={[styles.itemTexto, ativoAtual && styles.itemTextoAtivo]}>{item.label}</Text>
               </TouchableOpacity>
             );
@@ -88,8 +94,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
   },
-  itemAtivo: { backgroundColor: colors.secondary },
-  itemIcone: { fontSize: 16, width: 20, textAlign: "center" },
+  itemAtivo: { backgroundColor: colors.primary },
+  itemIcone: { width: 20, textAlign: "center" },
   itemTexto: { color: colors.ink, fontWeight: "600", fontSize: 13 },
   itemTextoAtivo: { color: colors.white },
   sair: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },

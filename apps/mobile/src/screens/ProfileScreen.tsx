@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing } from "@/theme";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
@@ -20,7 +21,10 @@ export function ProfileScreen() {
             <Text style={styles.avatarTexto}>{usuario?.nome?.[0]?.toUpperCase() ?? "?"}</Text>
           </View>
           <Text style={styles.nome}>{usuario?.nome}</Text>
-          <Text style={styles.nota}>★ {Number(usuario?.avaliacaoMediaCliente ?? 0).toFixed(1)}</Text>
+          <View style={styles.nota}>
+            <Ionicons name="star" size={14} color={colors.secondary} />
+            <Text style={styles.notaTexto}>{Number(usuario?.avaliacaoMediaCliente ?? 0).toFixed(1)}</Text>
+          </View>
         </View>
 
         <View style={styles.menu}>
@@ -62,7 +66,8 @@ const styles = StyleSheet.create({
   },
   avatarTexto: { fontSize: 28, fontWeight: "700", color: colors.primary },
   nome: { fontSize: 18, fontWeight: "700", color: colors.ink },
-  nota: { color: colors.secondary, marginTop: spacing.xs },
+  nota: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.xs },
+  notaTexto: { color: colors.secondary, fontWeight: "600" },
   menu: { backgroundColor: colors.white, borderRadius: radius.lg, overflow: "hidden" },
   menuItem: {
     paddingVertical: spacing.md,

@@ -38,7 +38,7 @@ export function Sidebar() {
                 href={item.href}
                 className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                   active
-                    ? "bg-secondary text-white shadow-sm"
+                    ? "bg-primary text-white shadow-sm"
                     : "text-black/70 hover:bg-black/5"
                 }`}
               >

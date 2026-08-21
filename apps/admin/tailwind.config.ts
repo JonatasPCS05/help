@@ -6,13 +6,13 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#2E7D32",
+          DEFAULT: "#388E3C",
           dark: "#1B5E20",
           light: "#E8F3E9",
         },
         secondary: {
-          DEFAULT: "#FF9800",
-          light: "#FFF3E0",
+          DEFAULT: "#1976D2",
+          light: "#E3F2FD",
         },
         tertiary: {
           DEFAULT: "#B14B6F",

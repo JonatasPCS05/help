@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 import { HomeStack } from "./HomeStack";
 import { OrdersScreen } from "@/screens/OrdersScreen";
 import { IncomingRequestsScreen } from "@/screens/IncomingRequestsScreen";
@@ -13,13 +14,15 @@ import { colors } from "@/theme";
 
 const Tab = createBottomTabNavigator();
 
-const ICONS: Record<string, string> = {
-  Home: "⌂",
-  Recebidos: "📥",
-  Orders: "☰",
-  Trabalhos: "🧰",
-  Chat: "✉",
-  Profile: "◉",
+// Nomes de ícones do Ionicons (@expo/vector-icons) — substituem os emojis
+// que ficavam inconsistentes com os demais ícones vetoriais do app.
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Home: "home-outline",
+  Recebidos: "file-tray-full-outline",
+  Orders: "receipt-outline",
+  Trabalhos: "briefcase-outline",
+  Chat: "chatbubble-ellipses-outline",
+  Profile: "person-outline",
 };
 
 const LABELS: Record<string, string> = {
@@ -81,7 +84,7 @@ function MobileTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>{ICONS[route.name]}</Text>,
+        tabBarIcon: ({ color, size }) => <Ionicons name={ICONS[route.name]} size={size} color={color} />,
       })}
     >
       <Tab.Screen name="Home" component={HomeStack} options={{ title: "Home" }} />
