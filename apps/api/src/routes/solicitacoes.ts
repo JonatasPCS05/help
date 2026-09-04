@@ -105,7 +105,16 @@ solicitacoesRouter.get("/me", async (req, res, next) => {
           : { clienteId: req.user!.sub }),
         ...(status ? { status: status as never } : {}),
       },
-      include: { categoria: true, endereco: true, fotos: true, orcamentos: true, pagamento: true },
+      include: {
+        categoria: true,
+        endereco: true,
+        fotos: true,
+        orcamentos: true,
+        pagamento: true,
+        visitaTecnica: true,
+        cliente: { select: { id: true, nome: true, avaliacaoMediaCliente: true } },
+        autonomo: { select: { id: true, nome: true, avaliacaoMediaAutonomo: true } },
+      },
       orderBy: { criadoEm: "desc" },
     });
 
@@ -326,7 +335,16 @@ solicitacoesRouter.post("/:id/concluir", async (req, res, next) => {
 async function buscarSolicitacaoDoUsuario(id: string, usuarioId: string) {
   const solicitacao = await prisma.solicitacao.findFirst({
     where: { id, OR: [{ clienteId: usuarioId }, { autonomoId: usuarioId }] },
-    include: { categoria: true, endereco: true, fotos: true, visitaTecnica: true, orcamentos: true, pagamento: true },
+    include: {
+      categoria: true,
+      endereco: true,
+      fotos: true,
+      visitaTecnica: true,
+      orcamentos: { orderBy: { criadoEm: "desc" } },
+      pagamento: true,
+      cliente: { select: { id: true, nome: true, avaliacaoMediaCliente: true, telefone: true } },
+      autonomo: { select: { id: true, nome: true, avaliacaoMediaAutonomo: true, telefone: true } },
+    },
   });
   if (!solicitacao) {
     throw new ApiHttpError(404, "nao_encontrada", "Solicitação não encontrada");

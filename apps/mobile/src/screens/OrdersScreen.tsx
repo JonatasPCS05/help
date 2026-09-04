@@ -13,6 +13,9 @@ interface Solicitacao {
   status: string;
   categoria: { nome: string };
   criadoEm: string;
+  cliente: { nome: string } | null;
+  autonomo: { nome: string } | null;
+  visitaTecnica: { dataHora: string } | null;
 }
 
 const ABAS_CLIENTE = [
@@ -29,11 +32,17 @@ const ABAS_AUTONOMO = [
   { chave: "cancelado", label: "Cancelado", status: ["cancelado", "em_disputa"] },
 ];
 
-interface Props {
-  papel?: "cliente" | "autonomo";
+function formatarDataHora(iso: string): string {
+  const data = new Date(iso);
+  return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-export function OrdersScreen({ papel = "cliente" }: Props) {
+interface Props {
+  papel?: "cliente" | "autonomo";
+  onAbrirSolicitacao: (id: string) => void;
+}
+
+export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const abas = papel === "autonomo" ? ABAS_AUTONOMO : ABAS_CLIENTE;
   const [abaAtiva, setAbaAtiva] = useState(abas[0]);
@@ -66,17 +75,30 @@ export function OrdersScreen({ papel = "cliente" }: Props) {
           data={filtradas}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.badge}>{item.categoria.nome}</Text>
-                <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
-              </View>
-              <Text style={styles.descricao} numberOfLines={2}>
-                {item.descricao}
-              </Text>
-            </View>
-          )}
+          renderItem={({ item }) => {
+            // Do ponto de vista do cliente mostramos quem aceitou (autônomo);
+            // do ponto de vista do autônomo mostramos quem é o cliente.
+            const outraParte = papel === "autonomo" ? item.cliente : item.autonomo;
+            return (
+              <TouchableOpacity style={styles.card} onPress={() => onAbrirSolicitacao(item.id)}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.badge}>{item.categoria.nome}</Text>
+                  <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
+                </View>
+                <Text style={styles.descricao} numberOfLines={2}>
+                  {item.descricao}
+                </Text>
+                {outraParte && (
+                  <Text style={styles.infoExtra}>
+                    {papel === "autonomo" ? "Cliente" : "Autônomo"}: {outraParte.nome}
+                  </Text>
+                )}
+                {item.visitaTecnica && (
+                  <Text style={styles.infoExtra}>Visita agendada: {formatarDataHora(item.visitaTecnica.dataHora)}</Text>
+                )}
+              </TouchableOpacity>
+            );
+          }}
           ListEmptyComponent={<Text style={styles.vazio}>Nenhum pedido nesta categoria.</Text>}
         />
       </ResponsiveContent>
@@ -104,5 +126,6 @@ const styles = StyleSheet.create({
   },
   statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink },
+  infoExtra: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
 });
