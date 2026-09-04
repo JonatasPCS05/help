@@ -16,7 +16,7 @@ export async function clearToken(): Promise<void> {
 }
 
 export class ApiClientError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public code?: string) {
     super(message);
   }
 }
@@ -35,7 +35,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiClientError(res.status, body.message ?? "Erro na requisição");
+    throw new ApiClientError(res.status, body.message ?? "Erro na requisição", body.error);
   }
 
   return res.json() as Promise<T>;

@@ -29,10 +29,18 @@ function toJwtPayload(usuario: {
   };
 }
 
+const senhaForteRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 const registroSchema = z.object({
   nome: z.string().min(2),
   email: z.string().email(),
-  senha: z.string().min(8),
+  senha: z
+    .string()
+    .min(8)
+    .regex(
+      senhaForteRegex,
+      "Senha deve ter letra maiúscula, minúscula, número e caractere especial"
+    ),
   cpf: z.string().regex(cpfRegex, "CPF deve conter 11 dígitos numéricos"),
   telefone: z.string().optional(),
 });
@@ -107,11 +115,16 @@ authRouter.post("/google", async (req, res, next) => {
 
     const { idToken, cpf } = googleLoginSchema.parse(req.body);
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new ApiHttpError(401, "google_token_invalido", "Token do Google inválido");
+    }
 
     if (!payload?.email) {
       throw new ApiHttpError(401, "google_token_invalido", "Token do Google inválido");

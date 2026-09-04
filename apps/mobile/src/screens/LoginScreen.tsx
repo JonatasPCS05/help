@@ -3,14 +3,20 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { ApiClientError } from "@/lib/api";
+import { formatarCpf } from "@/lib/format";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { colors, radius, spacing } from "@/theme";
 
-export function LoginScreen() {
-  const { entrar } = useAuth();
+export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
+  const { entrar, entrarComGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+
+  const [googleIdToken, setGoogleIdToken] = useState<string | null>(null);
+  const [googleCpf, setGoogleCpf] = useState("");
+  const [concluindoGoogle, setConcluindoGoogle] = useState(false);
 
   async function handleEntrar() {
     setErro(null);
@@ -22,6 +28,55 @@ export function LoginScreen() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  async function concluirCadastroGoogle() {
+    if (!googleIdToken) return;
+    if (googleCpf.replace(/\D/g, "").length !== 11) {
+      setErro("CPF deve conter 11 dígitos");
+      return;
+    }
+    setErro(null);
+    setConcluindoGoogle(true);
+    try {
+      await entrarComGoogle(googleIdToken, googleCpf.replace(/\D/g, ""));
+    } catch (e) {
+      setErro(e instanceof ApiClientError ? e.message : "Não foi possível concluir o cadastro");
+    } finally {
+      setConcluindoGoogle(false);
+    }
+  }
+
+  if (googleIdToken) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title}>Quase lá!</Text>
+          <Text style={styles.subtitle}>Precisamos do seu CPF pra concluir o cadastro.</Text>
+
+          <Text style={styles.label}>CPF</Text>
+          <TextInput
+            style={styles.input}
+            value={googleCpf}
+            onChangeText={(v) => setGoogleCpf(formatarCpf(v))}
+            placeholder="000.000.000-00"
+            keyboardType="numeric"
+            maxLength={14}
+            placeholderTextColor={colors.muted}
+          />
+
+          {erro && <Text style={styles.erro}>{erro}</Text>}
+
+          <TouchableOpacity style={styles.botaoPrimario} onPress={concluirCadastroGoogle} disabled={concluindoGoogle}>
+            {concluindoGoogle ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Concluir</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => { setGoogleIdToken(null); setErro(null); }}>
+            <Text style={styles.rodape}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -60,7 +115,21 @@ export function LoginScreen() {
           {carregando ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Entrar</Text>}
         </TouchableOpacity>
 
-        <Text style={styles.rodape}>Ainda não tem conta? Criar conta</Text>
+        {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID && (
+          <>
+            <View style={styles.divisorLinha}>
+              <View style={styles.divisorTraco} />
+              <Text style={styles.divisorTexto}>ou</Text>
+              <View style={styles.divisorTraco} />
+            </View>
+
+            <GoogleSignInButton onPrecisaCpf={setGoogleIdToken} onErro={setErro} />
+          </>
+        )}
+
+        <TouchableOpacity onPress={onCriarConta}>
+          <Text style={styles.rodape}>Ainda não tem conta? Criar conta</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -101,5 +170,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
+  divisorLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  divisorTraco: { flex: 1, height: 1, backgroundColor: colors.border },
+  divisorTexto: { color: colors.muted, fontSize: 12 },
   rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
 });

@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { LoginScreen } from "@/screens/LoginScreen";
+import { RegisterScreen } from "@/screens/RegisterScreen";
 import { MainTabs } from "@/navigation/MainTabs";
 import { colors } from "@/theme";
 
@@ -23,6 +25,7 @@ const TITULOS_ROTA: Record<string, string> = {
 
 function Root() {
   const { usuario, carregando } = useAuth();
+  const [tela, setTela] = useState<"login" | "registro">("login");
 
   if (carregando) {
     return (
@@ -32,7 +35,15 @@ function Root() {
     );
   }
 
-  return usuario ? <MainTabs /> : <LoginScreen />;
+  if (usuario) {
+    return <MainTabs />;
+  }
+
+  return tela === "login" ? (
+    <LoginScreen onCriarConta={() => setTela("registro")} />
+  ) : (
+    <RegisterScreen onVoltarLogin={() => setTela("login")} />
+  );
 }
 
 export default function App() {
