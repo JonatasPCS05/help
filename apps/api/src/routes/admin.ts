@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { autenticar, exigirRole } from "../middleware/auth";
 import { ApiHttpError } from "../middleware/errorHandler";
@@ -70,24 +71,31 @@ adminRouter.post("/solicitacoes-autonomo/:id/aprovar", async (req, res, next) =>
       throw new ApiHttpError(409, "status_invalido", "Solicitação já foi analisada");
     }
 
-    await prisma.$transaction([
-      prisma.solicitacaoAutonomo.update({
-        where: { id: solicitacao.id },
-        data: { status: "aprovado", analisadoPorAdminId: req.user!.sub, resolvidoEm: new Date() },
-      }),
-      prisma.perfilAutonomo.upsert({
-        where: { usuarioId: solicitacao.usuarioId },
-        update: { cnpj: solicitacao.cnpj, documentoCnpjUrl: solicitacao.documentoCnpjUrl, statusAprovacao: "aprovado" },
-        create: {
-          usuarioId: solicitacao.usuarioId,
-          cnpj: solicitacao.cnpj,
-          razaoSocial: solicitacao.usuario.nome,
-          documentoCnpjUrl: solicitacao.documentoCnpjUrl,
-          statusAprovacao: "aprovado",
-        },
-      }),
-      prisma.usuario.update({ where: { id: solicitacao.usuarioId }, data: { isAutonomo: true } }),
-    ]);
+    try {
+      await prisma.$transaction([
+        prisma.solicitacaoAutonomo.update({
+          where: { id: solicitacao.id },
+          data: { status: "aprovado", analisadoPorAdminId: req.user!.sub, resolvidoEm: new Date() },
+        }),
+        prisma.perfilAutonomo.upsert({
+          where: { usuarioId: solicitacao.usuarioId },
+          update: { cnpj: solicitacao.cnpj, documentoCnpjUrl: solicitacao.documentoCnpjUrl, statusAprovacao: "aprovado" },
+          create: {
+            usuarioId: solicitacao.usuarioId,
+            cnpj: solicitacao.cnpj,
+            razaoSocial: solicitacao.usuario.nome,
+            documentoCnpjUrl: solicitacao.documentoCnpjUrl,
+            statusAprovacao: "aprovado",
+          },
+        }),
+        prisma.usuario.update({ where: { id: solicitacao.usuarioId }, data: { isAutonomo: true } }),
+      ]);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ApiHttpError(409, "cnpj_em_uso", "Este CNPJ já está cadastrado para outro autônomo");
+      }
+      throw error;
+    }
 
     await enviarNotificacao({
       usuarioId: solicitacao.usuarioId,

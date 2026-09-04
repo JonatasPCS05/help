@@ -32,16 +32,26 @@ export default function CnpjApprovalPage() {
   useEffect(carregar, []);
 
   async function aprovar(id: string) {
-    await apiFetch(`/admin/solicitacoes-autonomo/${id}/aprovar`, { method: "POST" });
-    carregar();
+    setErro(null);
+    try {
+      await apiFetch(`/admin/solicitacoes-autonomo/${id}/aprovar`, { method: "POST" });
+      carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível aprovar a solicitação");
+    }
   }
 
   async function rejeitar(id: string) {
-    await apiFetch(`/admin/solicitacoes-autonomo/${id}/rejeitar`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
-    carregar();
+    setErro(null);
+    try {
+      await apiFetch(`/admin/solicitacoes-autonomo/${id}/rejeitar`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível rejeitar a solicitação");
+    }
   }
 
   return (
