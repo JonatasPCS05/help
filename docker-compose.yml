@@ -30,6 +30,8 @@ services:
       - .env
     ports:
       - "${API_PORT:-3333}:3333"
+    volumes:
+      - ./uploads:/repo/uploads
 
   admin:
     build:

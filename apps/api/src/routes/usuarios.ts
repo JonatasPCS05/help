@@ -86,6 +86,18 @@ usuariosRouter.post("/me/enderecos", async (req, res, next) => {
 
 // ---- Solicitação para virar Autônomo ----
 
+usuariosRouter.get("/me/solicitar-autonomo", async (req, res, next) => {
+  try {
+    const solicitacao = await prisma.solicitacaoAutonomo.findFirst({
+      where: { usuarioId: req.user!.sub },
+      orderBy: { criadoEm: "desc" },
+    });
+    res.json(solicitacao);
+  } catch (error) {
+    next(error);
+  }
+});
+
 const solicitarAutonomoSchema = z.object({
   cnpj: z.string().min(14),
   documentoCnpjUrl: z.string().url(),

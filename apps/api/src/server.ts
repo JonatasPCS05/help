@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "fs";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -14,8 +15,11 @@ import { cancelamentosRouter } from "./routes/cancelamentos";
 import { notificacoesRouter } from "./routes/notificacoes";
 import { chatRouter } from "./routes/chat";
 import { adminRouter } from "./routes/admin";
+import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads";
 import { stoneWebhookRouter } from "./webhooks/stone";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const app = express();
 
@@ -40,6 +44,8 @@ app.use("/cancelamentos", cancelamentosRouter);
 app.use("/notificacoes", notificacoesRouter);
 app.use("/chat", chatRouter);
 app.use("/admin", adminRouter);
+app.use("/uploads", express.static(UPLOADS_DIR));
+app.use("/uploads", uploadsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

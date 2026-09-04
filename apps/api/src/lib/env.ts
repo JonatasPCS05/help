@@ -4,6 +4,7 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   API_PORT: z.coerce.number().default(3333),
+  API_PUBLIC_URL: z.string().default("http://localhost:3333"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET é obrigatório"),
   JWT_EXPIRES_IN: z.string().default("7d"),
