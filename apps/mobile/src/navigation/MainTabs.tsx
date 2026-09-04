@@ -3,10 +3,10 @@ import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeStack } from "./HomeStack";
-import { OrdersScreen } from "@/screens/OrdersScreen";
+import { OrdersStack } from "./OrdersStack";
 import { IncomingRequestsScreen } from "@/screens/IncomingRequestsScreen";
 import { ChatListScreen } from "@/screens/ChatListScreen";
-import { ProfileScreen } from "@/screens/ProfileScreen";
+import { ProfileStack } from "./ProfileStack";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -45,13 +45,13 @@ function renderizarTela(chave: string) {
     case "Recebidos":
       return <IncomingRequestsScreen />;
     case "Orders":
-      return <OrdersScreen papel="cliente" />;
+      return <OrdersStack papel="cliente" />;
     case "Trabalhos":
-      return <OrdersScreen papel="autonomo" />;
+      return <OrdersStack papel="autonomo" />;
     case "Chat":
       return <ChatListScreen />;
     case "Profile":
-      return <ProfileScreen />;
+      return <ProfileStack />;
     default:
       return null;
   }
@@ -92,15 +92,15 @@ function MobileTabs() {
         <Tab.Screen name="Recebidos" component={IncomingRequestsScreen} options={{ title: "Recebidos" }} />
       )}
       <Tab.Screen name="Orders" options={{ title: "Orders" }}>
-        {() => <OrdersScreen papel="cliente" />}
+        {() => <OrdersStack papel="cliente" />}
       </Tab.Screen>
       {usuario?.isAutonomo && (
         <Tab.Screen name="Trabalhos" options={{ title: "Trabalhos" }}>
-          {() => <OrdersScreen papel="autonomo" />}
+          {() => <OrdersStack papel="autonomo" />}
         </Tab.Screen>
       )}
       <Tab.Screen name="Chat" component={ChatListScreen} options={{ title: "Chat" }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );
 }

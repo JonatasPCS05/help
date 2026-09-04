@@ -16,3 +16,14 @@ export const STATUS_LABELS: Record<string, string> = {
 export function labelStatus(status: string): string {
   return STATUS_LABELS[status] ?? status;
 }
+
+export const STATUS_PAGAMENTO_LABELS: Record<string, string> = {
+  retido: "Retido (liberado após conclusão)",
+  liberado: "Liberado",
+  reembolsado: "Reembolsado",
+  cancelado: "Cancelado",
+};
+
+export function labelStatusPagamento(status: string): string {
+  return STATUS_PAGAMENTO_LABELS[status] ?? status;
+}
