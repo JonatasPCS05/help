@@ -15,6 +15,7 @@ const envSchema = z.object({
   STONE_CLIENT_SECRET: z.string().optional(),
   STONE_WEBHOOK_SECRET: z.string().optional(),
   PLATAFORMA_TAXA_PERCENTUAL: z.coerce.number().default(2.0),
+  SOLICITACAO_EXPIRA_APOS_DIAS: z.coerce.number().default(3),
   FCM_PROJECT_ID: z.string().optional(),
   FCM_CLIENT_EMAIL: z.string().optional(),
   FCM_PRIVATE_KEY: z.string().optional(),

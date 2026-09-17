@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
@@ -166,6 +167,94 @@ authRouter.post("/google", async (req, res, next) => {
 
     const token = signJwt(toJwtPayload(usuario));
     res.json({ token, usuario: semSenha(usuario) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const RESET_TOKEN_VALIDADE_MS = 30 * 60 * 1000;
+
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+const esqueciSenhaSchema = z.object({
+  email: z.string().email(),
+});
+
+authRouter.post("/esqueci-senha", async (req, res, next) => {
+  try {
+    const { email } = esqueciSenhaSchema.parse(req.body);
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
+
+    // Resposta genérica sempre que possível, pra não vazar quais e-mails
+    // têm conta cadastrada.
+    const respostaGenerica = {
+      message: "Se esse e-mail tiver uma conta, enviaremos instruções de redefinição.",
+    };
+
+    if (!usuario) {
+      res.json(respostaGenerica);
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        resetSenhaTokenHash: hashToken(token),
+        resetSenhaExpiraEm: new Date(Date.now() + RESET_TOKEN_VALIDADE_MS),
+      },
+    });
+
+    if (env.RESEND_API_KEY) {
+      // TODO: enviar e-mail transacional de verdade via Resend com o link
+      // `${API_PUBLIC_URL}/resetar-senha?token=${token}`.
+      res.json(respostaGenerica);
+      return;
+    }
+
+    // Sem Resend configurado ainda: devolve o token direto na resposta (só
+    // nesse modo) pra a recuperação de senha continuar testável ponta a
+    // ponta, no mesmo espírito dos outros provedores externos em modo
+    // simulado (Stone, FCM, WhatsApp). Trocar por envio real assim que
+    // houver credencial de e-mail — ver RESEND_API_KEY em env.ts.
+    res.json({ ...respostaGenerica, devToken: token });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const resetarSenhaSchema = z.object({
+  token: z.string().min(1),
+  novaSenha: z
+    .string()
+    .min(8)
+    .regex(
+      senhaForteRegex,
+      "Senha deve ter letra maiúscula, minúscula, número e caractere especial"
+    ),
+});
+
+authRouter.post("/resetar-senha", async (req, res, next) => {
+  try {
+    const { token, novaSenha } = resetarSenhaSchema.parse(req.body);
+
+    const usuario = await prisma.usuario.findFirst({
+      where: { resetSenhaTokenHash: hashToken(token) },
+    });
+
+    if (!usuario || !usuario.resetSenhaExpiraEm || usuario.resetSenhaExpiraEm.getTime() < Date.now()) {
+      throw new ApiHttpError(400, "token_invalido_ou_expirado", "Token inválido ou expirado. Solicite uma nova redefinição.");
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, 10);
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { senhaHash, resetSenhaTokenHash: null, resetSenhaExpiraEm: null },
+    });
+
+    res.json({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     next(error);
   }

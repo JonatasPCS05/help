@@ -7,7 +7,7 @@ import { formatarCpf } from "@/lib/format";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { colors, radius, spacing } from "@/theme";
 
-export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
+export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: () => void; onEsqueciSenha: () => void }) {
   const { entrar, entrarComGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -85,10 +85,10 @@ export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
         <View style={styles.logo}>
           <Text style={styles.logoText}>H</Text>
         </View>
-        <Text style={styles.title}>Help</Text>
+        <Text style={styles.title}>HelpMate</Text>
         <Text style={styles.subtitle}>Bem-vindo de volta. Acesse sua conta.</Text>
 
-        <Text style={styles.label}>E-mail</Text>
+        <Text style={styles.label} nativeID="login-email-label">E-mail</Text>
         <TextInput
           style={styles.input}
           value={email}
@@ -97,9 +97,11 @@ export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
           autoCapitalize="none"
           keyboardType="email-address"
           placeholderTextColor={colors.muted}
+          accessibilityLabel="E-mail"
+          accessibilityLabelledBy="login-email-label"
         />
 
-        <Text style={styles.label}>Senha</Text>
+        <Text style={styles.label} nativeID="login-senha-label">Senha</Text>
         <TextInput
           style={styles.input}
           value={senha}
@@ -107,12 +109,28 @@ export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
           placeholder="••••••••"
           secureTextEntry
           placeholderTextColor={colors.muted}
+          accessibilityLabel="Senha"
+          accessibilityLabelledBy="login-senha-label"
         />
 
-        {erro && <Text style={styles.erro}>{erro}</Text>}
+        {erro && (
+          <Text style={styles.erro} accessibilityRole="alert">
+            {erro}
+          </Text>
+        )}
 
-        <TouchableOpacity style={styles.botaoPrimario} onPress={handleEntrar} disabled={carregando}>
+        <TouchableOpacity
+          style={styles.botaoPrimario}
+          onPress={handleEntrar}
+          disabled={carregando}
+          accessibilityRole="button"
+          accessibilityLabel="Entrar"
+        >
           {carregando ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Entrar</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onEsqueciSenha} accessibilityRole="button" accessibilityLabel="Esqueci minha senha">
+          <Text style={styles.rodape}>Esqueci minha senha</Text>
         </TouchableOpacity>
 
         {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID && (
@@ -127,7 +145,7 @@ export function LoginScreen({ onCriarConta }: { onCriarConta: () => void }) {
           </>
         )}
 
-        <TouchableOpacity onPress={onCriarConta}>
+        <TouchableOpacity onPress={onCriarConta} accessibilityRole="button" accessibilityLabel="Ainda não tem conta? Criar conta">
           <Text style={styles.rodape}>Ainda não tem conta? Criar conta</Text>
         </TouchableOpacity>
       </View>
