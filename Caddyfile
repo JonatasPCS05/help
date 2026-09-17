@@ -1,4 +1,4 @@
-api.jonatasteste.com.br {
+api.helpmate.com.br {
 	handle_path /app/* {
 		root * /srv/downloads
 		file_server
@@ -6,11 +6,11 @@ api.jonatasteste.com.br {
 	reverse_proxy api:3333
 }
 
-admin.jonatasteste.com.br {
+admin.helpmate.com.br {
 	reverse_proxy admin:3000
 }
 
-help.jonatasteste.com.br {
+helpmate.com.br, www.helpmate.com.br {
 	root * /srv/web
 	encode gzip
 	try_files {path} /index.html
