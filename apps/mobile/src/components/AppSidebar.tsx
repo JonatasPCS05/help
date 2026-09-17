@@ -2,6 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing } from "@/theme";
+import { confirmarAcao } from "@/lib/confirm";
 
 export interface SidebarItem {
   chave: string;
@@ -21,6 +22,10 @@ interface Props {
 export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
   const { usuario, sair } = useAuth();
 
+  function confirmarSaida() {
+    confirmarAcao("Sair da conta", "Tem certeza que deseja sair da sua conta?", sair);
+  }
+
   return (
     <View style={styles.container}>
       <View>
@@ -29,7 +34,7 @@ export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
             <Text style={styles.logoTexto}>H</Text>
           </View>
           <View>
-            <Text style={styles.nomeApp}>Help</Text>
+            <Text style={styles.nomeApp}>HelpMate</Text>
             <Text style={styles.subtitulo}>{usuario?.nome ?? ""}</Text>
           </View>
         </View>
@@ -42,6 +47,9 @@ export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
                 key={item.chave}
                 onPress={() => onSelecionar(item.chave)}
                 style={[styles.item, ativoAtual && styles.itemAtivo]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: ativoAtual }}
+                accessibilityLabel={item.label}
               >
                 <Ionicons
                   name={item.icone}
@@ -56,7 +64,7 @@ export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.sair} onPress={sair}>
+      <TouchableOpacity style={styles.sair} onPress={confirmarSaida} accessibilityRole="button" accessibilityLabel="Sair da conta">
         <Text style={styles.sairTexto}>Sair</Text>
       </TouchableOpacity>
     </View>
