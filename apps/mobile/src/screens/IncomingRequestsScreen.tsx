@@ -15,7 +15,7 @@ interface SolicitacaoDisponivel {
   cliente: { nome: string; avaliacaoMediaCliente: string | number };
 }
 
-export function IncomingRequestsScreen() {
+export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) => void }) {
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDisponivel[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -38,6 +38,11 @@ export function IncomingRequestsScreen() {
     try {
       await apiFetch(`/solicitacoes/${id}/${aceitar ? "aceitar" : "recusar"}`, { method: "POST" });
       setSolicitacoes((atual) => atual.filter((s) => s.id !== id));
+      // Depois de aceitar, vai direto pra tela onde o autônomo agenda a
+      // visita — em vez de deixar ele procurar manualmente em "Trabalhos".
+      if (aceitar) {
+        onAceito(id);
+      }
     } catch (e) {
       setErro(e instanceof ApiClientError ? e.message : "Não foi possível responder");
     } finally {
@@ -52,7 +57,11 @@ export function IncomingRequestsScreen() {
         <Text style={styles.subtitulo}>
           {carregando
             ? "Carregando..."
-            : `Você tem ${solicitacoes.length} pedido(s) de serviço próximos a você.`}
+            : solicitacoes.length === 0
+              ? "Nenhum pedido próximo no momento."
+              : solicitacoes.length === 1
+                ? "1 pedido próximo de você."
+                : `${solicitacoes.length} pedidos próximos de você.`}
         </Text>
 
         {erro && <Text style={styles.erro}>{erro}</Text>}
@@ -96,7 +105,12 @@ export function IncomingRequestsScreen() {
             </View>
           )}
           ListEmptyComponent={
-            !carregando ? <Text style={styles.vazio}>Nenhuma solicitação disponível no momento.</Text> : null
+            !carregando ? (
+              <Text style={styles.vazio}>
+                Nenhum pedido disponível no momento. Confira se você está online e se sua localização e categorias
+                estão atualizadas.
+              </Text>
+            ) : null
           }
         />
       </ResponsiveContent>

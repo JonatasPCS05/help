@@ -20,7 +20,7 @@ interface ItemHistorico extends Solicitacao {
   papel: "cliente" | "autonomo";
 }
 
-const STATUS_FINALIZADOS = ["concluido", "cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "em_disputa"];
+const STATUS_FINALIZADOS = ["concluido", "cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "em_disputa", "expirado"];
 
 export function HistoryScreen({ onVoltar, onAbrirSolicitacao }: { onVoltar: () => void; onAbrirSolicitacao: (id: string) => void }) {
   const { usuario } = useAuth();

@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
-import { labelStatus } from "@/lib/status";
+import { labelStatus, proximoPasso } from "@/lib/status";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 interface Solicitacao {
@@ -13,28 +13,43 @@ interface Solicitacao {
   status: string;
   categoria: { nome: string };
   criadoEm: string;
+  disponibilidade: { dia: string; periodo: string }[];
+  endereco: { bairro: string; cidade: string };
   cliente: { nome: string } | null;
   autonomo: { nome: string } | null;
   visitaTecnica: { dataHora: string } | null;
 }
 
+// Rótulos alinhados com o vocabulário de status (ver lib/status.ts) — o
+// nome da aba nunca deve soar contraditório com o status individual do
+// card dentro dela (ex.: card "Aceito" numa aba "Em aberto" confundia).
 const ABAS_CLIENTE = [
-  { chave: "aberto", label: "Em aberto", status: ["aguardando_autonomo", "aceito_pelo_autonomo", "visita_agendada", "orcamento_enviado"] },
-  { chave: "andamento", label: "Em andamento", status: ["orcamento_aceito", "pago", "em_andamento"] },
+  { chave: "aberto", label: "Aguardando início", status: ["aguardando_autonomo", "aceito_pelo_autonomo", "visita_agendada", "orcamento_enviado"] },
+  { chave: "andamento", label: "Em execução", status: ["orcamento_aceito", "pago", "em_andamento"] },
   { chave: "concluido", label: "Concluído", status: ["concluido"] },
-  { chave: "cancelado", label: "Cancelado", status: ["cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "em_disputa"] },
+  { chave: "cancelado", label: "Cancelado", status: ["cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "em_disputa", "expirado"] },
 ];
 
 const ABAS_AUTONOMO = [
   { chave: "aberto", label: "Aceitos", status: ["aceito_pelo_autonomo", "visita_agendada", "orcamento_enviado", "orcamento_aceito"] },
-  { chave: "andamento", label: "Em andamento", status: ["pago", "em_andamento"] },
+  { chave: "andamento", label: "Em execução", status: ["pago", "em_andamento"] },
   { chave: "concluido", label: "Concluído", status: ["concluido"] },
   { chave: "cancelado", label: "Cancelado", status: ["cancelado", "em_disputa"] },
 ];
 
+const LABEL_PERIODO: Record<string, string> = { manha: "Manhã", tarde: "Tarde", noite: "Noite" };
+
 function formatarDataHora(iso: string): string {
   const data = new Date(iso);
   return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatarPreferencia(disponibilidade: { dia: string; periodo: string }[]): string | null {
+  const primeira = disponibilidade?.[0];
+  if (!primeira) return null;
+  const [ano, mes, dia] = primeira.dia.split("-").map(Number);
+  const dataFormatada = new Date(ano, mes - 1, dia).toLocaleDateString("pt-BR");
+  return `${dataFormatada} (${LABEL_PERIODO[primeira.periodo] ?? primeira.periodo})`;
 }
 
 interface Props {
@@ -79,6 +94,8 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
             // Do ponto de vista do cliente mostramos quem aceitou (autônomo);
             // do ponto de vista do autônomo mostramos quem é o cliente.
             const outraParte = papel === "autonomo" ? item.cliente : item.autonomo;
+            const passo = proximoPasso(item.status, papel);
+            const preferencia = formatarPreferencia(item.disponibilidade);
             return (
               <TouchableOpacity style={styles.card} onPress={() => onAbrirSolicitacao(item.id)}>
                 <View style={styles.cardHeader}>
@@ -88,13 +105,25 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
                 <Text style={styles.descricao} numberOfLines={2}>
                   {item.descricao}
                 </Text>
+                {item.endereco && (
+                  <Text style={styles.infoExtra}>
+                    {item.endereco.bairro} · {item.endereco.cidade}
+                  </Text>
+                )}
                 {outraParte && (
                   <Text style={styles.infoExtra}>
                     {papel === "autonomo" ? "Cliente" : "Autônomo"}: {outraParte.nome}
                   </Text>
                 )}
-                {item.visitaTecnica && (
+                {item.visitaTecnica ? (
                   <Text style={styles.infoExtra}>Visita agendada: {formatarDataHora(item.visitaTecnica.dataHora)}</Text>
+                ) : (
+                  preferencia && <Text style={styles.infoExtra}>Preferência do cliente: {preferencia}</Text>
+                )}
+                {passo && (
+                  <View style={styles.proximoPassoLinha}>
+                    <Text style={styles.proximoPassoTexto}>→ {passo}</Text>
+                  </View>
                 )}
               </TouchableOpacity>
             );
@@ -127,5 +156,12 @@ const styles = StyleSheet.create({
   statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink },
   infoExtra: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
+  proximoPassoLinha: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  proximoPassoTexto: { color: colors.primary, fontSize: 12.5, fontWeight: "700" },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
 });
