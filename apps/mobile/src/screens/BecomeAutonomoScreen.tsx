@@ -127,6 +127,10 @@ export function BecomeAutonomoScreen({ onVoltar }: { onVoltar: () => void }) {
               <Text style={styles.subtitulo}>
                 Cadastre seu CNPJ e envie uma foto do documento pra começar a oferecer seus serviços.
               </Text>
+              <Text style={styles.avisoCnpj}>
+                Por enquanto só aceitamos autônomos com CNPJ (pessoa jurídica). Cadastro como pessoa física, sem
+                CNPJ, ainda não é suportado.
+              </Text>
 
               <Text style={styles.label}>CNPJ</Text>
               <TextInput
@@ -166,7 +170,8 @@ const styles = StyleSheet.create({
   centro: { flex: 1, alignItems: "center", justifyContent: "center" },
   voltar: { color: colors.primary, fontWeight: "600", marginTop: spacing.md },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
-  subtitulo: { color: colors.muted, marginBottom: spacing.lg },
+  subtitulo: { color: colors.muted, marginBottom: spacing.sm },
+  avisoCnpj: { color: colors.muted, fontSize: 12, marginBottom: spacing.lg, fontStyle: "italic" },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.lg },
   statusTitulo: { fontSize: 16, fontWeight: "700", color: colors.primary, marginBottom: spacing.xs },
   statusTexto: { color: colors.muted },
