@@ -4,8 +4,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { LandingScreen } from "@/screens/LandingScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { RegisterScreen } from "@/screens/RegisterScreen";
+import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 import { MainTabs } from "@/navigation/MainTabs";
 import { colors } from "@/theme";
 
@@ -13,19 +16,20 @@ import { colors } from "@/theme";
 // usa por padrão pro <title> da aba do navegador — por isso aparecia
 // "HomeMain" em vez de um nome amigável. Mapeamos aqui explicitamente.
 const TITULOS_ROTA: Record<string, string> = {
-  Home: "Help",
-  HomeMain: "Help",
-  NewRequest: "Nova Solicitação · Help",
-  Recebidos: "Solicitações Recebidas · Help",
-  Orders: "Meus Pedidos · Help",
-  Trabalhos: "Meus Trabalhos · Help",
-  Chat: "Chat · Help",
-  Profile: "Perfil · Help",
+  Home: "HelpMate",
+  HomeMain: "HelpMate",
+  NewRequest: "Nova Solicitação · HelpMate",
+  Recebidos: "Solicitações Recebidas · HelpMate",
+  Orders: "Meus Pedidos · HelpMate",
+  Trabalhos: "Meus Trabalhos · HelpMate",
+  Chat: "Chat · HelpMate",
+  Profile: "Perfil · HelpMate",
 };
 
 function Root() {
   const { usuario, carregando } = useAuth();
-  const [tela, setTela] = useState<"login" | "registro">("login");
+  const [tela, setTela] = useState<"landing" | "login" | "registro" | "esqueci-senha" | "resetar-senha">("landing");
+  const [tokenReset, setTokenReset] = useState<string | undefined>(undefined);
 
   if (carregando) {
     return (
@@ -39,11 +43,41 @@ function Root() {
     return <MainTabs />;
   }
 
-  return tela === "login" ? (
-    <LoginScreen onCriarConta={() => setTela("registro")} />
-  ) : (
-    <RegisterScreen onVoltarLogin={() => setTela("login")} />
-  );
+  if (tela === "landing") {
+    return <LandingScreen onEntrar={() => setTela("login")} />;
+  }
+
+  if (tela === "registro") {
+    return <RegisterScreen onVoltarLogin={() => setTela("login")} />;
+  }
+
+  if (tela === "esqueci-senha") {
+    return (
+      <ForgotPasswordScreen
+        onVoltarLogin={() => setTela("login")}
+        onTemCodigo={() => {
+          setTokenReset(undefined);
+          setTela("resetar-senha");
+        }}
+        onCodigoRecebido={(_email, token) => {
+          setTokenReset(token);
+          setTela("resetar-senha");
+        }}
+      />
+    );
+  }
+
+  if (tela === "resetar-senha") {
+    return (
+      <ResetPasswordScreen
+        tokenInicial={tokenReset}
+        onConcluido={() => setTela("login")}
+        onVoltar={() => setTela("esqueci-senha")}
+      />
+    );
+  }
+
+  return <LoginScreen onCriarConta={() => setTela("registro")} onEsqueciSenha={() => setTela("esqueci-senha")} />;
 }
 
 export default function App() {
@@ -52,7 +86,7 @@ export default function App() {
       <AuthProvider>
         <NavigationContainer
           documentTitle={{
-            formatter: (options, route) => TITULOS_ROTA[route?.name ?? ""] ?? options?.title ?? "Help",
+            formatter: (options, route) => TITULOS_ROTA[route?.name ?? ""] ?? options?.title ?? "HelpMate",
           }}
         >
           <StatusBar style="dark" />

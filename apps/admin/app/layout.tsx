@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Help — Admin Central",
-  description: "Painel administrativo do Help",
+  title: "HelpMate — Admin Central",
+  description: "Painel administrativo do HelpMate",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -50,7 +50,7 @@ export default function LoginPage() {
             H
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-primary">Help — Admin</h1>
+            <h1 className="text-xl font-bold text-primary">HelpMate — Admin</h1>
             <p className="text-sm text-black/50">Acesse o painel administrativo</p>
           </div>
         </div>

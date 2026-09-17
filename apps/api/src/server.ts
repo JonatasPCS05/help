@@ -51,5 +51,5 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(env.API_PORT, () => {
-  console.log(`Help API rodando em http://localhost:${env.API_PORT}`);
+  console.log(`HelpMate API rodando em http://localhost:${env.API_PORT}`);
 });

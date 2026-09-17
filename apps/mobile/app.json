@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Help",
+    "name": "HelpMate",
     "slug": "help-marketplace",
     "scheme": "help",
     "version": "0.1.0",
@@ -21,7 +21,13 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O HelpMate usa sua localização pra te mostrar pedidos de serviço próximos quando você está online como autônomo."
+        }
+      ]
     ]
   }
 }
