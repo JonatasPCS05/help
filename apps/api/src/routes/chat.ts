@@ -9,6 +9,41 @@ export const chatRouter = Router();
 
 chatRouter.use(autenticar);
 
+// Lista as solicitações do usuário que já têm autônomo definido (a partir
+// daí as duas partes podem conversar), com a última mensagem pra preview.
+chatRouter.get("/conversas", async (req, res, next) => {
+  try {
+    const solicitacoes = await prisma.solicitacao.findMany({
+      where: {
+        autonomoId: { not: null },
+        OR: [{ clienteId: req.user!.sub }, { autonomoId: req.user!.sub }],
+      },
+      include: {
+        categoria: true,
+        cliente: { select: { id: true, nome: true } },
+        autonomo: { select: { id: true, nome: true } },
+        mensagens: { orderBy: { criadoEm: "desc" }, take: 1 },
+      },
+    });
+
+    const conversas = solicitacoes
+      .map((s) => ({
+        solicitacaoId: s.id,
+        categoria: s.categoria.nome,
+        status: s.status,
+        outraParte: s.clienteId === req.user!.sub ? s.autonomo : s.cliente,
+        ultimaMensagem: s.mensagens[0]?.mensagem ?? null,
+        ultimaMensagemEm: s.mensagens[0]?.criadoEm ?? s.criadoEm,
+        ultimaMensagemDe: s.mensagens[0]?.remetenteId ?? null,
+      }))
+      .sort((a, b) => new Date(b.ultimaMensagemEm).getTime() - new Date(a.ultimaMensagemEm).getTime());
+
+    res.json(conversas);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Requisito 26: troca de mensagens entre Cliente e Autônomo vinculada a uma solicitação.
 chatRouter.get("/:solicitacaoId/mensagens", async (req, res, next) => {
   try {
