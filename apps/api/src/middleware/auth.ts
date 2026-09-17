@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { JwtPayload, Role } from "@help/shared-types";
 import { verifyJwt } from "../lib/jwt";
+import { prisma } from "../lib/prisma";
 
 declare global {
   namespace Express {
@@ -10,7 +11,14 @@ declare global {
   }
 }
 
-export function autenticar(req: Request, res: Response, next: NextFunction) {
+// O token só prova QUEM é o usuário (assinatura + sub) — os papéis
+// (isCliente/isAutonomo/isAdmin) são relidos do banco a cada requisição
+// em vez de confiar no que veio gravado no JWT no momento do login. Sem
+// isso, um usuário desativado, uma aprovação de autônomo revogada ou uma
+// promoção/remoção de admin só valeriam depois do token expirar (até
+// JWT_EXPIRES_IN, hoje 7 dias) — a ação continuaria liberada nesse meio
+// tempo, mesmo já bloqueada no banco.
+export async function autenticar(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
 
   if (!header?.startsWith("Bearer ")) {
@@ -20,7 +28,20 @@ export function autenticar(req: Request, res: Response, next: NextFunction) {
   const token = header.slice("Bearer ".length);
 
   try {
-    req.user = verifyJwt(token);
+    const decodificado = verifyJwt(token);
+
+    const usuario = await prisma.usuario.findUnique({ where: { id: decodificado.sub } });
+    if (!usuario || !usuario.ativo) {
+      return res.status(401).json({ error: "unauthorized", message: "Token inválido ou expirado" });
+    }
+
+    req.user = {
+      sub: usuario.id,
+      email: usuario.email,
+      isCliente: usuario.isCliente,
+      isAutonomo: usuario.isAutonomo,
+      isAdmin: usuario.isAdmin,
+    };
     return next();
   } catch {
     return res.status(401).json({ error: "unauthorized", message: "Token inválido ou expirado" });

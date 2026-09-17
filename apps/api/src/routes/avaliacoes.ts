@@ -61,9 +61,20 @@ avaliacoesRouter.post("/", async (req, res, next) => {
 
 avaliacoesRouter.get("/usuario/:usuarioId", async (req, res, next) => {
   try {
+    // Rota pública (qualquer usuário autenticado pode consultar a nota de
+    // outro, tipo Uber) — por isso só devolve o necessário pra exibir a
+    // avaliação, sem avaliadorId/solicitacaoId (permitiriam cruzar quem
+    // avaliou quem em qual pedido, metadado que ninguém pediu aqui).
     const avaliacoes = await prisma.avaliacao.findMany({
       where: { avaliadoId: req.params.usuarioId },
       orderBy: { criadoEm: "desc" },
+      select: {
+        id: true,
+        nota: true,
+        comentario: true,
+        criadoEm: true,
+        avaliador: { select: { nome: true } },
+      },
     });
     res.json(avaliacoes);
   } catch (error) {
