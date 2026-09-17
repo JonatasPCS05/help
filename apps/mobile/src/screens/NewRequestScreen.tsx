@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { colors, radius, spacing } from "@/theme";
 import { paraDataISO } from "@/lib/data";
+import { formatarCep } from "@/lib/format";
+import { buscarEnderecoPorCep } from "@/lib/cep";
 import { DatePickerField } from "@/components/DatePickerField";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 
@@ -18,19 +20,26 @@ interface Endereco {
   bairro: string;
 }
 
+const PERIODOS = [
+  { valor: "manha", label: "Manhã" },
+  { valor: "tarde", label: "Tarde" },
+  { valor: "noite", label: "Noite" },
+];
+
 const NOVO_ENDERECO_INICIAL = {
+  cep: "",
   rua: "",
   numero: "",
+  complemento: "",
   bairro: "",
   cidade: "",
   estado: "",
-  cep: "",
   latitude: "-23.5505",
   longitude: "-46.6333",
 };
 
-// Formulário de nova solicitação (requisito 10): foto (TODO upload real),
-// endereço, descrição e disponibilidade.
+// Formulário de nova solicitação (requisito 10): categoria, endereço,
+// descrição e disponibilidade.
 export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => void; onCancelar: () => void }) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
@@ -38,12 +47,15 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
   const [enderecoId, setEnderecoId] = useState<string | null>(null);
   const [descricao, setDescricao] = useState("");
   const [data, setData] = useState<Date | null>(null);
+  const [periodo, setPeriodo] = useState("manha");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const [mostrarNovoEndereco, setMostrarNovoEndereco] = useState(false);
   const [novoEndereco, setNovoEndereco] = useState(NOVO_ENDERECO_INICIAL);
   const [salvandoEndereco, setSalvandoEndereco] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [erroCep, setErroCep] = useState<string | null>(null);
 
   function carregarEnderecos() {
     return apiFetch<Endereco[]>("/usuarios/me/enderecos").then((lista) => {
@@ -61,6 +73,28 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
     carregarEnderecos();
   }, []);
 
+  async function alterarCep(valor: string) {
+    const formatado = formatarCep(valor);
+    setNovoEndereco((n) => ({ ...n, cep: formatado }));
+    setErroCep(null);
+
+    if (formatado.replace(/\D/g, "").length !== 8) return;
+
+    setBuscandoCep(true);
+    try {
+      const endereco = await buscarEnderecoPorCep(formatado);
+      if (!endereco) {
+        setErroCep("CEP não encontrado — preencha o endereço manualmente");
+        return;
+      }
+      setNovoEndereco((n) => ({ ...n, rua: endereco.rua, bairro: endereco.bairro, cidade: endereco.cidade, estado: endereco.estado }));
+    } catch {
+      setErroCep("Não foi possível buscar o CEP agora — preencha manualmente");
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
+
   async function salvarEndereco() {
     if (!novoEndereco.rua || !novoEndereco.bairro || !novoEndereco.cidade || !novoEndereco.estado || !novoEndereco.cep) {
       setErro("Preencha todos os campos do endereço");
@@ -74,10 +108,11 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
         body: JSON.stringify({
           rua: novoEndereco.rua,
           numero: novoEndereco.numero || undefined,
+          complemento: novoEndereco.complemento || undefined,
           bairro: novoEndereco.bairro,
           cidade: novoEndereco.cidade,
           estado: novoEndereco.estado.toUpperCase(),
-          cep: novoEndereco.cep,
+          cep: novoEndereco.cep.replace(/\D/g, ""),
           latitude: Number(novoEndereco.latitude),
           longitude: Number(novoEndereco.longitude),
         }),
@@ -107,7 +142,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
           categoriaId,
           enderecoId,
           descricao,
-          disponibilidade: [{ dia: paraDataISO(data), periodo: "manha" }],
+          disponibilidade: [{ dia: paraDataISO(data), periodo }],
         }),
       });
       onEnviado();
@@ -163,18 +198,26 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
 
         {mostrarNovoEndereco && (
           <View style={styles.novoEnderecoCard}>
+            <View style={styles.cepLinha}>
+              <TextInput
+                style={[styles.input, styles.cepInput]}
+                value={novoEndereco.cep}
+                onChangeText={alterarCep}
+                placeholder="CEP"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                maxLength={9}
+              />
+              {buscandoCep && <ActivityIndicator color={colors.primary} style={styles.cepLoading} />}
+            </View>
+            {buscandoCep && <Text style={styles.dica}>Buscando endereço...</Text>}
+            {erroCep && <Text style={styles.erroCep}>{erroCep}</Text>}
+
             <TextInput
               style={styles.input}
               value={novoEndereco.rua}
               onChangeText={(v) => setNovoEndereco((n) => ({ ...n, rua: v }))}
               placeholder="Rua"
-              placeholderTextColor={colors.muted}
-            />
-            <TextInput
-              style={styles.input}
-              value={novoEndereco.numero}
-              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, numero: v }))}
-              placeholder="Número"
               placeholderTextColor={colors.muted}
             />
             <TextInput
@@ -194,7 +237,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
             <TextInput
               style={styles.input}
               value={novoEndereco.estado}
-              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, estado: v }))}
+              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, estado: v.toUpperCase() }))}
               placeholder="UF (ex: SP)"
               placeholderTextColor={colors.muted}
               maxLength={2}
@@ -202,11 +245,17 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
             />
             <TextInput
               style={styles.input}
-              value={novoEndereco.cep}
-              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, cep: v }))}
-              placeholder="CEP"
+              value={novoEndereco.numero}
+              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, numero: v }))}
+              placeholder="Número"
               placeholderTextColor={colors.muted}
-              keyboardType="numeric"
+            />
+            <TextInput
+              style={styles.input}
+              value={novoEndereco.complemento}
+              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, complemento: v }))}
+              placeholder="Complemento (opcional)"
+              placeholderTextColor={colors.muted}
             />
             <Text style={styles.dica}>
               Latitude/longitude usadas pra localizar profissionais na região (ajuste se souber as coordenadas exatas).
@@ -237,7 +286,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
           </View>
         )}
 
-        <Text style={styles.label}>Descrição Detalhada</Text>
+        <Text style={styles.label}>Descrição detalhada</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           value={descricao}
@@ -250,6 +299,19 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
         <Text style={styles.label}>Data preferencial</Text>
         <DatePickerField value={data} onChange={setData} minimumDate={new Date()} style={styles.input} />
 
+        <Text style={styles.label}>Período preferido</Text>
+        <View style={styles.chips}>
+          {PERIODOS.map((p) => (
+            <TouchableOpacity
+              key={p.valor}
+              onPress={() => setPeriodo(p.valor)}
+              style={[styles.chip, periodo === p.valor && styles.chipAtivo]}
+            >
+              <Text style={[styles.chipTexto, periodo === p.valor && styles.chipTextoAtivo]}>{p.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {erro && <Text style={styles.erro}>{erro}</Text>}
 
         <View style={styles.botoes}>
@@ -260,7 +322,7 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
             {enviando ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.botaoPrimarioTexto}>Enviar Solicitação</Text>
+              <Text style={styles.botaoPrimarioTexto}>Enviar solicitação</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -297,6 +359,10 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   dica: { color: colors.muted, fontSize: 11, marginBottom: spacing.sm },
+  cepLinha: { flexDirection: "row", alignItems: "center" },
+  cepInput: { flex: 1 },
+  cepLoading: { marginLeft: spacing.sm, marginBottom: spacing.md },
+  erroCep: { color: "#C62828", fontSize: 11, marginTop: -spacing.sm, marginBottom: spacing.sm },
   input: {
     backgroundColor: colors.white,
     borderRadius: radius.md,

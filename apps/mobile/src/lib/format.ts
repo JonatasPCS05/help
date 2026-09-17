@@ -15,6 +15,11 @@ export function formatarCnpj(valor: string) {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 }
 
+export function formatarCep(valor: string) {
+  const digitos = valor.replace(/\D/g, "").slice(0, 8);
+  return digitos.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+}
+
 export function formatarTelefone(valor: string) {
   const digitos = valor.replace(/\D/g, "").slice(0, 11);
   if (digitos.length <= 10) {
