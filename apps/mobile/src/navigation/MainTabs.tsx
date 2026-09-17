@@ -4,8 +4,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeStack } from "./HomeStack";
 import { OrdersStack } from "./OrdersStack";
-import { IncomingRequestsScreen } from "@/screens/IncomingRequestsScreen";
-import { ChatListScreen } from "@/screens/ChatListScreen";
+import { RecebidosStack } from "./RecebidosStack";
+import { ChatStack } from "./ChatStack";
 import { ProfileStack } from "./ProfileStack";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -34,8 +34,13 @@ const LABELS: Record<string, string> = {
   Profile: "Perfil",
 };
 
-function telasDisponiveis(isAutonomo: boolean): string[] {
-  return ["Home", ...(isAutonomo ? ["Recebidos"] : []), "Orders", ...(isAutonomo ? ["Trabalhos"] : []), "Chat", "Profile"];
+// As abas mudam conforme o MODO ativo (não só a permissão bruta) — em
+// modo autônomo mostramos os pedidos recebidos/trabalhos, em modo cliente
+// mostramos os pedidos que a pessoa fez. Ver ModoSwitcher/AuthContext.
+function telasDisponiveis(modo: "cliente" | "autonomo"): string[] {
+  return modo === "autonomo"
+    ? ["Home", "Recebidos", "Trabalhos", "Chat", "Profile"]
+    : ["Home", "Orders", "Chat", "Profile"];
 }
 
 function renderizarTela(chave: string) {
@@ -43,13 +48,13 @@ function renderizarTela(chave: string) {
     case "Home":
       return <HomeStack />;
     case "Recebidos":
-      return <IncomingRequestsScreen />;
+      return <RecebidosStack />;
     case "Orders":
       return <OrdersStack papel="cliente" />;
     case "Trabalhos":
       return <OrdersStack papel="autonomo" />;
     case "Chat":
-      return <ChatListScreen />;
+      return <ChatStack />;
     case "Profile":
       return <ProfileStack />;
     default:
@@ -61,8 +66,8 @@ function renderizarTela(chave: string) {
 // fixo, no mesmo estilo do dashboard admin. Em telas estreitas (celular),
 // mantemos a barra de abas embaixo — mesmas telas, layout diferente.
 function DesktopShell() {
-  const { usuario } = useAuth();
-  const telas = telasDisponiveis(!!usuario?.isAutonomo);
+  const { modo } = useAuth();
+  const telas = telasDisponiveis(modo);
   const [telaAtiva, setTelaAtiva] = useState(telas[0]);
 
   const itens = telas.map((chave) => ({ chave, label: LABELS[chave], icone: ICONS[chave] }));
@@ -76,7 +81,7 @@ function DesktopShell() {
 }
 
 function MobileTabs() {
-  const { usuario } = useAuth();
+  const { modo } = useAuth();
 
   return (
     <Tab.Navigator
@@ -88,18 +93,20 @@ function MobileTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeStack} options={{ title: "Home" }} />
-      {usuario?.isAutonomo && (
-        <Tab.Screen name="Recebidos" component={IncomingRequestsScreen} options={{ title: "Recebidos" }} />
+      {modo === "autonomo" && (
+        <Tab.Screen name="Recebidos" component={RecebidosStack} options={{ title: "Recebidos" }} />
       )}
-      <Tab.Screen name="Orders" options={{ title: "Orders" }}>
-        {() => <OrdersStack papel="cliente" />}
-      </Tab.Screen>
-      {usuario?.isAutonomo && (
+      {modo === "cliente" && (
+        <Tab.Screen name="Orders" options={{ title: "Orders" }}>
+          {() => <OrdersStack papel="cliente" />}
+        </Tab.Screen>
+      )}
+      {modo === "autonomo" && (
         <Tab.Screen name="Trabalhos" options={{ title: "Trabalhos" }}>
           {() => <OrdersStack papel="autonomo" />}
         </Tab.Screen>
       )}
-      <Tab.Screen name="Chat" component={ChatListScreen} options={{ title: "Chat" }} />
+      <Tab.Screen name="Chat" component={ChatStack} options={{ title: "Chat" }} />
       <Tab.Screen name="Profile" component={ProfileStack} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );

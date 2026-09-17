@@ -1,9 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch, clearToken, getToken, setToken } from "@/lib/api";
+
+export type Modo = "cliente" | "autonomo";
+const MODO_STORAGE_KEY = "help_modo_ativo";
 
 interface PerfilAutonomo {
   online: boolean;
+  latitudeAtual: string | number | null;
+  longitudeAtual: string | number | null;
   categorias: { categoria: { id: string; nome: string } }[];
 }
 
@@ -36,6 +42,10 @@ interface AuthContextValue {
   entrarComGoogle: (idToken: string, cpf?: string) => Promise<void>;
   recarregarUsuario: () => Promise<void>;
   sair: () => Promise<void>;
+  /** Modo efetivo: sempre "cliente" pra quem não é autônomo, independente
+   * da preferência salva — só quem tem os dois papéis pode alternar. */
+  modo: Modo;
+  definirModo: (modo: Modo) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -43,6 +53,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [modoPreferido, setModoPreferido] = useState<Modo>("cliente");
 
   useEffect(() => {
     (async () => {
@@ -57,7 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setCarregando(false);
     })();
+    AsyncStorage.getItem(MODO_STORAGE_KEY).then((valor) => {
+      if (valor === "autonomo" || valor === "cliente") setModoPreferido(valor);
+    });
   }, []);
+
+  const modo: Modo = usuario?.isAutonomo ? modoPreferido : "cliente";
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -95,8 +111,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await clearToken();
         setUsuario(null);
       },
+      modo,
+      definirModo(novoModo: Modo) {
+        setModoPreferido(novoModo);
+        AsyncStorage.setItem(MODO_STORAGE_KEY, novoModo).catch(() => {});
+      },
     }),
-    [usuario, carregando]
+    [usuario, carregando, modo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
