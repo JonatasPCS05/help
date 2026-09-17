@@ -1,13 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing } from "@/theme";
-import { labelStatus } from "@/lib/status";
+import { labelStatus, proximoPasso } from "@/lib/status";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
-import { DatePickerField } from "@/components/DatePickerField";
+import { DateTimePickerField } from "@/components/DateTimePickerField";
 import { confirmarAcao } from "@/lib/confirm";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
 import { COR_ESTRELA } from "@/lib/rating";
@@ -27,10 +27,13 @@ interface Orcamento {
 }
 
 interface Pagamento {
+  id: string;
   valorTotal: string | number;
+  taxaPlataformaPercentual: string | number;
   taxaPlataformaValor: string | number;
   valorAutonomo: string | number;
   status: "retido" | "liberado" | "reembolsado" | "cancelado";
+  criadoEm: string;
 }
 
 interface SolicitacaoDetalhe {
@@ -38,6 +41,7 @@ interface SolicitacaoDetalhe {
   clienteId: string;
   autonomoId: string | null;
   descricao: string;
+  disponibilidade: { dia: string; periodo: string }[];
   status: string;
   concluidoClienteEm: string | null;
   concluidoAutonomoEm: string | null;
@@ -48,6 +52,25 @@ interface SolicitacaoDetalhe {
   pagamento: Pagamento | null;
   cliente: Pessoa;
   autonomo: Pessoa | null;
+}
+
+const LABEL_PERIODO: Record<string, string> = { manha: "Manhã", tarde: "Tarde", noite: "Noite" };
+const HORA_PADRAO_PERIODO: Record<string, number> = { manha: 9, tarde: 14, noite: 19 };
+
+function formatarDisponibilidade(disponibilidade: { dia: string; periodo: string }[]): string | null {
+  const primeira = disponibilidade?.[0];
+  if (!primeira) return null;
+  const [ano, mes, dia] = primeira.dia.split("-").map(Number);
+  const dataFormatada = new Date(ano, mes - 1, dia).toLocaleDateString("pt-BR");
+  return `${dataFormatada} (${LABEL_PERIODO[primeira.periodo] ?? primeira.periodo})`;
+}
+
+function preferenciaJaPassou(disponibilidade: { dia: string; periodo: string }[]): boolean {
+  const primeira = disponibilidade?.[0];
+  if (!primeira) return false;
+  const [ano, mes, dia] = primeira.dia.split("-").map(Number);
+  const hora = HORA_PADRAO_PERIODO[primeira.periodo] ?? 9;
+  return new Date(ano, mes - 1, dia, hora, 0, 0).getTime() <= Date.now();
 }
 
 const LABEL_STATUS_PAGAMENTO: Record<string, string> = {
@@ -72,6 +95,8 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
   const [nota, setNota] = useState(5);
   const [comentario, setComentario] = useState("");
   const [avaliado, setAvaliado] = useState(false);
+  const [mostrarReagendar, setMostrarReagendar] = useState(false);
+  const [mostrarComprovante, setMostrarComprovante] = useState(false);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -82,6 +107,25 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
   }, [solicitacaoId]);
 
   useFocusEffect(carregar);
+
+  // Pré-preenche a data (e um horário padrão pro período escolhido) com a
+  // preferência que o cliente já informou ao criar o pedido, pra o
+  // autônomo não ter que redigitar — mas continua ajustável.
+  useEffect(() => {
+    const preferencia = solicitacao?.disponibilidade?.[0];
+    if (preferencia && dataVisita === null) {
+      const [ano, mes, dia] = preferencia.dia.split("-").map(Number);
+      const hora = HORA_PADRAO_PERIODO[preferencia.periodo] ?? 9;
+      const candidata = new Date(ano, mes - 1, dia, hora, 0, 0);
+      // Se a preferência do cliente já passou (pedido ficou parado antes de
+      // ser aceito, por exemplo), não faz sentido pré-preencher com uma
+      // data no passado — deixa em branco pra forçar escolher uma nova.
+      if (candidata.getTime() > Date.now()) {
+        setDataVisita(candidata);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [solicitacao]);
 
   if (carregando || !solicitacao) {
     return (
@@ -99,6 +143,12 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
   const orcamentoAceito = solicitacao.orcamentos.find((o) => o.status === "aceito");
   const jaConcluiMinhaParte = souCliente ? !!solicitacao.concluidoClienteEm : !!solicitacao.concluidoAutonomoEm;
   const podeCancelar = !["em_andamento", "concluido", "cancelado"].includes(solicitacao.status);
+  const visitaPassada =
+    !!solicitacao.visitaTecnica &&
+    !solicitacao.visitaTecnica.realizada &&
+    new Date(solicitacao.visitaTecnica.dataHora).getTime() <= Date.now();
+  const preferenciaPassada =
+    solicitacao.status === "aceito_pelo_autonomo" && preferenciaJaPassou(solicitacao.disponibilidade);
 
   async function executar(acao: () => Promise<unknown>) {
     setErro(null);
@@ -118,16 +168,25 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
       setErro("Escolha a data da visita");
       return;
     }
-    await executar(() =>
-      apiFetch(`/solicitacoes/${solicitacaoId}/visita`, {
+    if (dataVisita.getTime() <= Date.now()) {
+      setErro("A data e hora da visita precisam ser no futuro");
+      return;
+    }
+    await executar(async () => {
+      await apiFetch(`/solicitacoes/${solicitacaoId}/visita`, {
         method: "POST",
         body: JSON.stringify({ dataHora: dataVisita.toISOString() }),
-      })
-    );
+      });
+      setMostrarReagendar(false);
+    });
   }
 
   async function marcarVisitaRealizada() {
     await executar(() => apiFetch(`/solicitacoes/${solicitacaoId}/visita/realizar`, { method: "POST" }));
+  }
+
+  async function iniciarServico() {
+    await executar(() => apiFetch(`/solicitacoes/${solicitacaoId}/iniciar`, { method: "POST" }));
   }
 
   async function enviarOrcamento() {
@@ -216,7 +275,18 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
             <Text style={styles.statusTexto}>{labelStatus(solicitacao.status)}</Text>
           </View>
 
+          {proximoPasso(solicitacao.status, souAutonomo ? "autonomo" : "cliente") && (
+            <Text style={styles.proximoPasso}>
+              → {proximoPasso(solicitacao.status, souAutonomo ? "autonomo" : "cliente")}
+            </Text>
+          )}
+
           <Text style={styles.descricao}>{solicitacao.descricao}</Text>
+          {formatarDisponibilidade(solicitacao.disponibilidade) && (
+            <Text style={styles.preferenciaData}>
+              📅 Preferência do cliente: {formatarDisponibilidade(solicitacao.disponibilidade)}
+            </Text>
+          )}
           <Text style={styles.endereco}>
             {solicitacao.endereco.rua}
             {solicitacao.endereco.numero ? `, ${solicitacao.endereco.numero}` : ""} — {solicitacao.endereco.bairro},{" "}
@@ -235,7 +305,19 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
           {souAutonomo && solicitacao.status === "aceito_pelo_autonomo" && (
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>Agendar visita técnica</Text>
-              <DatePickerField value={dataVisita} onChange={setDataVisita} minimumDate={new Date()} style={styles.input} />
+              {preferenciaPassada ? (
+                <Text style={styles.aviso}>
+                  A data preferida pelo cliente não está mais disponível. Escolha um novo dia e horário.
+                </Text>
+              ) : (
+                formatarDisponibilidade(solicitacao.disponibilidade) && (
+                  <Text style={styles.cardMuted}>
+                    Cliente prefere: {formatarDisponibilidade(solicitacao.disponibilidade)} — já vem preenchido
+                    abaixo, mas você pode ajustar.
+                  </Text>
+                )
+              )}
+              <DateTimePickerField value={dataVisita} onChange={setDataVisita} minimumDate={new Date()} style={styles.input} />
               <TouchableOpacity style={styles.botaoPrimario} onPress={agendarVisita} disabled={processando}>
                 <Text style={styles.botaoPrimarioTexto}>Confirmar agendamento</Text>
               </TouchableOpacity>
@@ -256,10 +338,32 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
                 })}
               </Text>
               <Text style={styles.cardMuted}>{solicitacao.visitaTecnica.realizada ? "Realizada" : "Aguardando"}</Text>
+
+              {visitaPassada && <Text style={styles.aviso}>A data da visita já passou.</Text>}
+
               {souAutonomo && !solicitacao.visitaTecnica.realizada && (
-                <TouchableOpacity style={styles.botaoSecundario} onPress={marcarVisitaRealizada} disabled={processando}>
-                  <Text style={styles.botaoSecundarioTexto}>Marcar visita como realizada</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity style={styles.botaoSecundario} onPress={marcarVisitaRealizada} disabled={processando}>
+                    <Text style={styles.botaoSecundarioTexto}>Marcar visita como realizada</Text>
+                  </TouchableOpacity>
+                  {!mostrarReagendar ? (
+                    <TouchableOpacity onPress={() => setMostrarReagendar(true)} style={styles.linkSecundario}>
+                      <Text style={styles.linkSecundarioTexto}>Propor outro horário</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.reagendarBloco}>
+                      <DateTimePickerField value={dataVisita} onChange={setDataVisita} minimumDate={new Date()} style={styles.input} />
+                      <View style={styles.botoesLinha}>
+                        <TouchableOpacity style={styles.botaoSecundario} onPress={() => setMostrarReagendar(false)}>
+                          <Text style={styles.botaoSecundarioTexto}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.botaoPrimario, styles.flex1]} onPress={agendarVisita} disabled={processando}>
+                          <Text style={styles.botaoPrimarioTexto}>Confirmar novo horário</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           )}
@@ -320,7 +424,11 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>Pagamento</Text>
               <Text style={styles.valorDestaque}>R$ {Number(orcamentoAceito.valor).toFixed(2)}</Text>
-              <Text style={styles.cardMuted}>Fica retido até a conclusão do serviço.</Text>
+              <Text style={styles.cardMuted}>
+                Você paga o valor total combinado no orçamento (a taxa da plataforma já está incluída, não é
+                cobrada à parte). O valor fica retido com segurança e só é liberado pro autônomo depois que os
+                dois confirmarem que o serviço foi concluído.
+              </Text>
               <TouchableOpacity style={styles.botaoPrimario} onPress={pagar} disabled={processando}>
                 <Text style={styles.botaoPrimarioTexto}>Pagar agora</Text>
               </TouchableOpacity>
@@ -335,11 +443,53 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
                 {Number(solicitacao.pagamento.taxaPlataformaValor).toFixed(2)}
               </Text>
               <Text style={styles.cardMuted}>{LABEL_STATUS_PAGAMENTO[solicitacao.pagamento.status]}</Text>
+              <Text style={styles.cardMuted}>
+                {solicitacao.pagamento.status === "liberado"
+                  ? "Repasse ao autônomo já liberado."
+                  : "O repasse ao autônomo acontece automaticamente assim que cliente e autônomo confirmarem a conclusão do serviço."}
+              </Text>
+
+              <TouchableOpacity onPress={() => setMostrarComprovante((v) => !v)} style={styles.linkSecundario}>
+                <Text style={styles.linkSecundarioTexto}>{mostrarComprovante ? "Ocultar comprovante" : "Ver comprovante"}</Text>
+              </TouchableOpacity>
+
+              {mostrarComprovante && (
+                <View style={styles.comprovante}>
+                  <Text style={styles.comprovanteTitulo}>Comprovante de Pagamento</Text>
+                  <Text style={styles.comprovanteLinha}>Pedido: {solicitacao.categoria.nome} · {solicitacaoId}</Text>
+                  <Text style={styles.comprovanteLinha}>
+                    Data do pagamento: {new Date(solicitacao.pagamento.criadoEm).toLocaleString("pt-BR")}
+                  </Text>
+                  <Text style={styles.comprovanteLinha}>Cliente: {solicitacao.cliente.nome}</Text>
+                  {solicitacao.autonomo && <Text style={styles.comprovanteLinha}>Autônomo: {solicitacao.autonomo.nome}</Text>}
+                  <View style={styles.comprovanteDivisor} />
+                  <Text style={styles.comprovanteLinha}>Valor total: R$ {Number(solicitacao.pagamento.valorTotal).toFixed(2)}</Text>
+                  <Text style={styles.comprovanteLinha}>
+                    Taxa da plataforma ({Number(solicitacao.pagamento.taxaPlataformaPercentual).toFixed(0)}%): R${" "}
+                    {Number(solicitacao.pagamento.taxaPlataformaValor).toFixed(2)}
+                  </Text>
+                  <Text style={styles.comprovanteLinha}>
+                    Valor repassado ao autônomo: R$ {Number(solicitacao.pagamento.valorAutonomo).toFixed(2)}
+                  </Text>
+                  <Text style={styles.comprovanteLinha}>Status: {LABEL_STATUS_PAGAMENTO[solicitacao.pagamento.status]}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Iniciar serviço — autônomo, depois do pagamento */}
+          {souAutonomo && solicitacao.status === "pago" && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitulo}>Iniciar serviço</Text>
+              <Text style={styles.cardMuted}>Pagamento recebido. Marque quando começar a execução do serviço.</Text>
+              <TouchableOpacity style={styles.botaoPrimario} onPress={iniciarServico} disabled={processando}>
+                <Text style={styles.botaoPrimarioTexto}>Iniciar serviço</Text>
+              </TouchableOpacity>
             </View>
           )}
 
           {/* Conclusão mútua */}
-          {(solicitacao.status === "pago" || solicitacao.status === "em_andamento") && (
+          {solicitacao.status === "em_andamento" && (
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>Conclusão do serviço</Text>
               <Text style={styles.cardMuted}>
@@ -359,9 +509,15 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
           {solicitacao.status === "concluido" && !avaliado && (
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>Avaliar {souAutonomo ? "cliente" : "autônomo"}</Text>
-              <View style={styles.estrelas}>
+              <View style={styles.estrelas} accessibilityRole="adjustable" accessibilityLabel={`Nota: ${nota} de 5 estrelas`}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <TouchableOpacity key={n} onPress={() => setNota(n)}>
+                  <TouchableOpacity
+                    key={n}
+                    onPress={() => setNota(n)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${n} estrela${n > 1 ? "s" : ""}`}
+                    accessibilityState={{ selected: n === nota }}
+                  >
                     <Text style={[styles.estrela, n <= nota && styles.estrelaAtiva]}>★</Text>
                   </TouchableOpacity>
                 ))}
@@ -422,6 +578,7 @@ const styles = StyleSheet.create({
   voltar: { marginTop: spacing.md, marginBottom: spacing.sm },
   voltarTexto: { color: colors.primary, fontWeight: "700" },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  proximoPasso: { color: colors.primary, fontWeight: "700", fontSize: 13, marginTop: spacing.sm },
   badge: {
     alignSelf: "flex-start",
     backgroundColor: colors.secondaryLight,
@@ -434,6 +591,7 @@ const styles = StyleSheet.create({
   },
   statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink, fontSize: 15, marginTop: spacing.sm },
+  preferenciaData: { color: colors.muted, fontSize: 13, marginTop: spacing.xs },
   endereco: { color: colors.muted, fontSize: 12, marginTop: spacing.xs, marginBottom: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
   cardTitulo: { fontWeight: "700", color: colors.ink, marginBottom: spacing.xs },
@@ -469,6 +627,21 @@ const styles = StyleSheet.create({
   estrela: { fontSize: 26, color: colors.border },
   estrelaAtiva: { color: COR_ESTRELA },
   erro: { color: "#C62828", marginBottom: spacing.sm },
+  aviso: { color: "#C62828", fontSize: 12, fontWeight: "600", marginTop: spacing.xs, marginBottom: spacing.xs },
+  linkSecundario: { marginTop: spacing.sm, alignItems: "center" },
+  linkSecundarioTexto: { color: colors.primary, fontWeight: "700", fontSize: 13 },
+  reagendarBloco: { marginTop: spacing.sm },
+  comprovante: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.canvas,
+  },
+  comprovanteTitulo: { fontWeight: "700", color: colors.ink, marginBottom: spacing.xs },
+  comprovanteLinha: { color: colors.ink, fontSize: 13, marginBottom: 2 },
+  comprovanteDivisor: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   cancelarBloco: { marginTop: spacing.sm, marginBottom: spacing.xl },
   linkCancelar: { color: "#C62828", fontWeight: "600", textAlign: "center" },
 });
