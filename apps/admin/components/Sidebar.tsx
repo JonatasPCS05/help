@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/users", label: "Users" },
   { href: "/cnpj-approval", label: "CNPJ Approval" },
+  { href: "/categorias", label: "Categorias" },
+  { href: "/revisao-pedidos", label: "Revisão de Pedidos" },
   { href: "/disputes", label: "Disputes" },
   { href: "/settings", label: "Settings" },
 ];

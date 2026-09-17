@@ -216,6 +216,108 @@ adminRouter.post("/cancelamentos/:id/resolver", async (req, res, next) => {
   }
 });
 
+// Administração de categorias de serviço (criar, renomear, ativar/
+// desativar). Sem exclusão de verdade: categorias já usadas em
+// solicitações/perfis de autônomo não podem sumir do banco sem quebrar
+// esses registros — "desativar" (ativo=false) já remove a categoria das
+// opções em GET /categorias (rota pública, filtra ativo:true) sem
+// apagar histórico.
+adminRouter.get("/categorias", async (req, res, next) => {
+  try {
+    const categorias = await prisma.categoria.findMany({ orderBy: { nome: "asc" } });
+    res.json(categorias);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const criarCategoriaSchema = z.object({ nome: z.string().min(2) });
+
+adminRouter.post("/categorias", async (req, res, next) => {
+  try {
+    const dados = criarCategoriaSchema.parse(req.body);
+
+    let categoria;
+    try {
+      categoria = await prisma.categoria.create({ data: { nome: dados.nome } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ApiHttpError(409, "categoria_existente", "Já existe uma categoria com esse nome");
+      }
+      throw error;
+    }
+
+    res.status(201).json(categoria);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const atualizarCategoriaSchema = z.object({
+  nome: z.string().min(2).optional(),
+  ativo: z.boolean().optional(),
+});
+
+adminRouter.patch("/categorias/:id", async (req, res, next) => {
+  try {
+    const dados = atualizarCategoriaSchema.parse(req.body);
+
+    let categoria;
+    try {
+      categoria = await prisma.categoria.update({ where: { id: req.params.id }, data: dados });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ApiHttpError(409, "categoria_existente", "Já existe uma categoria com esse nome");
+      }
+      throw error;
+    }
+
+    res.json(categoria);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Pedidos na categoria "Outro Serviço" ficam invisíveis pros autônomos
+// até passar por aqui — o admin aprova como está ou reclassifica numa
+// categoria de verdade antes de liberar.
+adminRouter.get("/solicitacoes-pendentes-revisao", async (req, res, next) => {
+  try {
+    const solicitacoes = await prisma.solicitacao.findMany({
+      where: { revisadoAdmin: false },
+      include: {
+        categoria: true,
+        endereco: { select: { bairro: true, cidade: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true } },
+      },
+      orderBy: { criadoEm: "asc" },
+    });
+    res.json(solicitacoes);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const revisarSolicitacaoSchema = z.object({ categoriaId: z.string().uuid().optional() });
+
+adminRouter.post("/solicitacoes/:id/revisar", async (req, res, next) => {
+  try {
+    const dados = revisarSolicitacaoSchema.parse(req.body ?? {});
+
+    const solicitacao = await prisma.solicitacao.update({
+      where: { id: req.params.id },
+      data: {
+        revisadoAdmin: true,
+        categoriaId: dados.categoriaId,
+      },
+    });
+
+    res.json(solicitacao);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Requisito 42: resumo geral de transações e taxas arrecadadas.
 adminRouter.get("/resumo", async (req, res, next) => {
   try {
@@ -229,7 +331,7 @@ adminRouter.get("/resumo", async (req, res, next) => {
       prisma.solicitacao.count({
         where: {
           status: {
-            notIn: ["concluido", "cancelado", "recusado_pelo_autonomo", "orcamento_recusado"],
+            notIn: ["concluido", "cancelado", "recusado_pelo_autonomo", "orcamento_recusado", "expirado"],
           },
         },
       }),
