@@ -6,7 +6,10 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./public/logo512.png",
     "splash": {
+      "image": "./public/logo512.png",
+      "resizeMode": "contain",
       "backgroundColor": "#FBF9F6"
     },
     "assetBundlePatterns": [
@@ -17,7 +20,11 @@
       "bundleIdentifier": "br.com.help.app"
     },
     "android": {
-      "package": "br.com.help.app"
+      "package": "br.com.help.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./public/logo512.png",
+        "backgroundColor": "#FBF9F6"
+      }
     },
     "plugins": [
       "@react-native-community/datetimepicker",
