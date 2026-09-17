@@ -34,7 +34,8 @@
         {
           "locationWhenInUsePermission": "O HelpMate usa sua localização pra te mostrar pedidos de serviço próximos quando você está online como autônomo."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
