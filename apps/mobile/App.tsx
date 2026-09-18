@@ -29,6 +29,7 @@ const TITULOS_ROTA: Record<string, string> = {
 function Root() {
   const { usuario, carregando } = useAuth();
   const [tela, setTela] = useState<"landing" | "login" | "registro" | "esqueci-senha" | "resetar-senha">("landing");
+  const [emailReset, setEmailReset] = useState("");
   const [tokenReset, setTokenReset] = useState<string | undefined>(undefined);
 
   if (carregando) {
@@ -55,12 +56,9 @@ function Root() {
     return (
       <ForgotPasswordScreen
         onVoltarLogin={() => setTela("login")}
-        onTemCodigo={() => {
-          setTokenReset(undefined);
-          setTela("resetar-senha");
-        }}
-        onCodigoRecebido={(_email, token) => {
-          setTokenReset(token);
+        onEnviado={(email, devToken) => {
+          setEmailReset(email);
+          setTokenReset(devToken);
           setTela("resetar-senha");
         }}
       />
@@ -70,6 +68,7 @@ function Root() {
   if (tela === "resetar-senha") {
     return (
       <ResetPasswordScreen
+        email={emailReset}
         tokenInicial={tokenReset}
         onConcluido={() => setTela("login")}
         onVoltar={() => setTela("esqueci-senha")}

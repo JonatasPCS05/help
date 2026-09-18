@@ -175,9 +175,14 @@ authRouter.post("/google", async (req, res, next) => {
 });
 
 const RESET_TOKEN_VALIDADE_MS = 30 * 60 * 1000;
+const RESET_TENTATIVAS_MAXIMAS = 5;
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function gerarCodigoReset(): string {
+  return crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
 const esqueciSenhaSchema = z.object({
@@ -192,7 +197,7 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
     // Resposta genérica sempre que possível, pra não vazar quais e-mails
     // têm conta cadastrada.
     const respostaGenerica = {
-      message: "Se esse e-mail tiver uma conta, enviaremos instruções de redefinição.",
+      message: "Se esse e-mail tiver uma conta, enviaremos um código de redefinição.",
     };
 
     if (!usuario) {
@@ -200,12 +205,13 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
       return;
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
+    const codigo = gerarCodigoReset();
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
-        resetSenhaTokenHash: hashToken(token),
+        resetSenhaTokenHash: hashToken(codigo),
         resetSenhaExpiraEm: new Date(Date.now() + RESET_TOKEN_VALIDADE_MS),
+        resetSenhaTentativas: 0,
       },
     });
 
@@ -218,8 +224,8 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
           html: `
             <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
               <h2 style="color: #388E3C;">Redefinir senha</h2>
-              <p>Você pediu pra redefinir a senha da sua conta HelpMate. Cole o código abaixo no app, na tela de redefinição de senha:</p>
-              <p style="font-size: 28px; font-weight: bold; letter-spacing: 2px; background: #F1F8E9; padding: 16px; border-radius: 8px; text-align: center; word-break: break-all;">${token}</p>
+              <p>Use o código abaixo pra redefinir a senha da sua conta HelpMate:</p>
+              <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; background: #F1F8E9; padding: 16px; border-radius: 8px; text-align: center;">${codigo}</p>
               <p style="color: #666; font-size: 13px;">Esse código expira em 30 minutos. Se você não pediu essa redefinição, pode ignorar este e-mail.</p>
             </div>
           `,
@@ -233,18 +239,19 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
       return;
     }
 
-    // Sem Resend configurado ainda: devolve o token direto na resposta (só
+    // Sem Resend configurado ainda: devolve o código direto na resposta (só
     // nesse modo) pra a recuperação de senha continuar testável ponta a
     // ponta, no mesmo espírito dos outros provedores externos em modo
     // simulado (Stone, FCM, WhatsApp). Trocar por envio real assim que
     // houver credencial de e-mail — ver RESEND_API_KEY em env.ts.
-    res.json({ ...respostaGenerica, devToken: token });
+    res.json({ ...respostaGenerica, devToken: codigo });
   } catch (error) {
     next(error);
   }
 });
 
 const resetarSenhaSchema = z.object({
+  email: z.string().email(),
   token: z.string().min(1),
   novaSenha: z
     .string()
@@ -257,20 +264,30 @@ const resetarSenhaSchema = z.object({
 
 authRouter.post("/resetar-senha", async (req, res, next) => {
   try {
-    const { token, novaSenha } = resetarSenhaSchema.parse(req.body);
+    const { email, token, novaSenha } = resetarSenhaSchema.parse(req.body);
 
-    const usuario = await prisma.usuario.findFirst({
-      where: { resetSenhaTokenHash: hashToken(token) },
-    });
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
 
     if (!usuario || !usuario.resetSenhaExpiraEm || usuario.resetSenhaExpiraEm.getTime() < Date.now()) {
-      throw new ApiHttpError(400, "token_invalido_ou_expirado", "Token inválido ou expirado. Solicite uma nova redefinição.");
+      throw new ApiHttpError(400, "codigo_invalido_ou_expirado", "Código inválido ou expirado. Solicite um novo.");
+    }
+
+    if (usuario.resetSenhaTentativas >= RESET_TENTATIVAS_MAXIMAS) {
+      throw new ApiHttpError(429, "muitas_tentativas", "Muitas tentativas com esse código. Solicite um novo.");
+    }
+
+    if (usuario.resetSenhaTokenHash !== hashToken(token)) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { resetSenhaTentativas: { increment: 1 } },
+      });
+      throw new ApiHttpError(400, "codigo_invalido_ou_expirado", "Código inválido ou expirado. Solicite um novo.");
     }
 
     const senhaHash = await bcrypt.hash(novaSenha, 10);
     await prisma.usuario.update({
       where: { id: usuario.id },
-      data: { senhaHash, resetSenhaTokenHash: null, resetSenhaExpiraEm: null },
+      data: { senhaHash, resetSenhaTokenHash: null, resetSenhaExpiraEm: null, resetSenhaTentativas: 0 },
     });
 
     res.json({ message: "Senha redefinida com sucesso." });

@@ -7,12 +7,13 @@ import { colors, radius, spacing } from "@/theme";
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 interface Props {
+  email: string;
   tokenInicial?: string;
   onConcluido: () => void;
   onVoltar: () => void;
 }
 
-export function ResetPasswordScreen({ tokenInicial, onConcluido, onVoltar }: Props) {
+export function ResetPasswordScreen({ email, tokenInicial, onConcluido, onVoltar }: Props) {
   const [token, setToken] = useState(tokenInicial ?? "");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -23,8 +24,8 @@ export function ResetPasswordScreen({ tokenInicial, onConcluido, onVoltar }: Pro
   async function handleRedefinir() {
     setErro(null);
 
-    if (!token.trim()) {
-      setErro("Cole o código recebido");
+    if (token.trim().length !== 6) {
+      setErro("Digite o código de 6 dígitos");
       return;
     }
     if (!SENHA_FORTE_REGEX.test(novaSenha)) {
@@ -40,7 +41,7 @@ export function ResetPasswordScreen({ tokenInicial, onConcluido, onVoltar }: Pro
     try {
       await apiFetch("/auth/resetar-senha", {
         method: "POST",
-        body: JSON.stringify({ token: token.trim(), novaSenha }),
+        body: JSON.stringify({ email, token: token.trim(), novaSenha }),
       });
       setSucesso(true);
     } catch (e) {
@@ -67,18 +68,22 @@ export function ResetPasswordScreen({ tokenInicial, onConcluido, onVoltar }: Pro
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Redefinir senha</Text>
-        <Text style={styles.subtitle}>Cole o código que você recebeu e escolha uma nova senha.</Text>
+        <Text style={styles.title}>Digite o código</Text>
+        <Text style={styles.subtitle}>
+          Enviamos um código de 6 dígitos pra <Text style={styles.subtitleDestaque}>{email}</Text>. Confira sua caixa
+          de entrada (e o spam) e digite ele abaixo.
+        </Text>
 
         <Text style={styles.label}>Código</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.inputCodigo]}
           value={token}
-          onChangeText={setToken}
-          placeholder="Código de redefinição"
-          autoCapitalize="none"
+          onChangeText={(v) => setToken(v.replace(/\D/g, "").slice(0, 6))}
+          placeholder="000000"
+          keyboardType="number-pad"
+          maxLength={6}
           placeholderTextColor={colors.muted}
-          accessibilityLabel="Código de redefinição"
+          accessibilityLabel="Código de 6 dígitos"
         />
 
         <Text style={styles.label}>Nova senha</Text>
@@ -116,8 +121,8 @@ export function ResetPasswordScreen({ tokenInicial, onConcluido, onVoltar }: Pro
           {carregando ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Redefinir senha</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={onVoltar} accessibilityRole="button" accessibilityLabel="Voltar">
-          <Text style={styles.rodape}>Voltar</Text>
+        <TouchableOpacity onPress={onVoltar} accessibilityRole="button" accessibilityLabel="Não recebeu? Pedir novo código">
+          <Text style={styles.rodape}>Não recebeu? Pedir novo código</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -129,6 +134,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
   title: { textAlign: "center", fontSize: 22, fontWeight: "700", color: colors.primary },
   subtitle: { textAlign: "center", color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
+  subtitleDestaque: { color: colors.ink, fontWeight: "700" },
   label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
   dica: { fontSize: 11, color: colors.muted, marginTop: -spacing.sm, marginBottom: spacing.md },
   input: {
@@ -139,6 +145,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
     color: colors.ink,
+  },
+  inputCodigo: {
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: 12,
+    textAlign: "center",
+    color: colors.primary,
   },
   erro: { color: "#C62828", marginBottom: spacing.sm },
   botaoPrimario: {

@@ -6,19 +6,16 @@ import { colors, radius, spacing } from "@/theme";
 
 interface Props {
   onVoltarLogin: () => void;
-  onTemCodigo: (email: string) => void;
-  onCodigoRecebido: (email: string, token: string) => void;
+  onEnviado: (email: string, devToken?: string) => void;
 }
 
-export function ForgotPasswordScreen({ onVoltarLogin, onTemCodigo, onCodigoRecebido }: Props) {
+export function ForgotPasswordScreen({ onVoltarLogin, onEnviado }: Props) {
   const [email, setEmail] = useState("");
   const [erro, setErro] = useState<string | null>(null);
-  const [mensagem, setMensagem] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
   async function handleEnviar() {
     setErro(null);
-    setMensagem(null);
     if (!email.includes("@")) {
       setErro("Informe um e-mail válido");
       return;
@@ -30,17 +27,9 @@ export function ForgotPasswordScreen({ onVoltarLogin, onTemCodigo, onCodigoReceb
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       });
-
-      if (resp.devToken) {
-        // Sem serviço de e-mail configurado ainda: segue direto pra tela de
-        // redefinir com o código já preenchido.
-        onCodigoRecebido(email.trim(), resp.devToken);
-        return;
-      }
-
-      setMensagem(resp.message);
+      onEnviado(email.trim(), resp.devToken);
     } catch (e) {
-      setErro(e instanceof ApiClientError ? e.message : "Não foi possível enviar as instruções");
+      setErro(e instanceof ApiClientError ? e.message : "Não foi possível enviar o código");
     } finally {
       setCarregando(false);
     }
@@ -51,7 +40,7 @@ export function ForgotPasswordScreen({ onVoltarLogin, onTemCodigo, onCodigoReceb
       <View style={styles.card}>
         <Text style={styles.title}>Esqueci minha senha</Text>
         <Text style={styles.subtitle}>
-          Informe o e-mail da sua conta. Vamos enviar um código pra você redefinir a senha.
+          Informe o e-mail da sua conta. Vamos te mandar um código de 6 dígitos pra redefinir a senha.
         </Text>
 
         <Text style={styles.label}>E-mail</Text>
@@ -67,20 +56,15 @@ export function ForgotPasswordScreen({ onVoltarLogin, onTemCodigo, onCodigoReceb
         />
 
         {erro && <Text style={styles.erro} accessibilityRole="alert">{erro}</Text>}
-        {mensagem && <Text style={styles.sucesso} accessibilityRole="alert">{mensagem}</Text>}
 
         <TouchableOpacity
           style={styles.botaoPrimario}
           onPress={handleEnviar}
           disabled={carregando}
           accessibilityRole="button"
-          accessibilityLabel="Enviar instruções"
+          accessibilityLabel="Enviar código"
         >
-          {carregando ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Enviar instruções</Text>}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => onTemCodigo(email.trim())} accessibilityRole="button" accessibilityLabel="Já tenho um código">
-          <Text style={styles.rodape}>Já tenho um código</Text>
+          {carregando ? <ActivityIndicator color={colors.white} /> : <Text style={styles.botaoPrimarioTexto}>Enviar código</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={onVoltarLogin} accessibilityRole="button" accessibilityLabel="Voltar pro login">
@@ -107,7 +91,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   erro: { color: "#C62828", marginBottom: spacing.sm },
-  sucesso: { color: colors.primary, marginBottom: spacing.sm, fontWeight: "600" },
   botaoPrimario: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,

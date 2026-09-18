@@ -83,6 +83,7 @@ model Usuario {
   ativo                   Boolean  @default(true)
   resetSenhaTokenHash     String?  @map("reset_senha_token_hash")
   resetSenhaExpiraEm      DateTime? @map("reset_senha_expira_em") @db.Timestamptz(6)
+  resetSenhaTentativas    Int      @default(0) @map("reset_senha_tentativas")
   criadoEm                DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
   atualizadoEm            DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(6)
 
