@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { Resend } from "resend";
 import { z } from "zod";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
@@ -11,6 +12,7 @@ import { ApiHttpError } from "../middleware/errorHandler";
 export const authRouter = Router();
 
 const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 const cpfRegex = /^\d{11}$/;
 
@@ -207,9 +209,26 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
       },
     });
 
-    if (env.RESEND_API_KEY) {
-      // TODO: enviar e-mail transacional de verdade via Resend com o link
-      // `${API_PUBLIC_URL}/resetar-senha?token=${token}`.
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: env.EMAIL_FROM,
+          to: usuario.email,
+          subject: "Código para redefinir sua senha — HelpMate",
+          html: `
+            <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+              <h2 style="color: #388E3C;">Redefinir senha</h2>
+              <p>Você pediu pra redefinir a senha da sua conta HelpMate. Cole o código abaixo no app, na tela de redefinição de senha:</p>
+              <p style="font-size: 28px; font-weight: bold; letter-spacing: 2px; background: #F1F8E9; padding: 16px; border-radius: 8px; text-align: center; word-break: break-all;">${token}</p>
+              <p style="color: #666; font-size: 13px;">Esse código expira em 30 minutos. Se você não pediu essa redefinição, pode ignorar este e-mail.</p>
+            </div>
+          `,
+        });
+      } catch (erroEnvio) {
+        // Falha de envio não deve vazar pro cliente (evitaria diferenciar
+        // e-mails existentes de inexistentes) — só logamos pra investigar.
+        console.error("Falha ao enviar e-mail de redefinição de senha", erroEnvio);
+      }
       res.json(respostaGenerica);
       return;
     }

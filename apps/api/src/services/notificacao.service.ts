@@ -1,6 +1,9 @@
+import { Resend } from "resend";
 import type { Canal } from "@help/shared-types";
 import { prisma } from "../lib/prisma";
 import { env } from "../lib/env";
+
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 interface EnviarNotificacaoInput {
   usuarioId: string;
@@ -48,13 +51,25 @@ async function enviarPush(usuarioId: string, titulo: string, mensagem: string) {
 }
 
 async function enviarEmail(usuarioId: string, titulo: string, mensagem: string) {
-  if (!env.RESEND_API_KEY) return;
+  if (!resend) return;
   const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
   if (!usuario) return;
 
-  // TODO: integrar com Resend (ou SES) para envio transacional real.
-  void titulo;
-  void mensagem;
+  try {
+    await resend.emails.send({
+      from: env.EMAIL_FROM,
+      to: usuario.email,
+      subject: `${titulo} — HelpMate`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2 style="color: #388E3C;">${titulo}</h2>
+          <p>${mensagem}</p>
+        </div>
+      `,
+    });
+  } catch (erro) {
+    console.error("Falha ao enviar e-mail de notificação", erro);
+  }
 }
 
 async function enviarWhatsapp(usuarioId: string, mensagem: string) {
