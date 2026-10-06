@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { labelStatus, proximoPasso } from "@/lib/status";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { DateTimePickerField } from "@/components/DateTimePickerField";
 import { confirmarAcao } from "@/lib/confirm";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
+import { AvaliacoesModal } from "@/components/AvaliacoesModal";
+import { RelogioAnimado } from "@/components/RelogioAnimado";
 import { COR_ESTRELA } from "@/lib/rating";
 
 interface Pessoa {
@@ -82,6 +86,8 @@ const LABEL_STATUS_PAGAMENTO: Record<string, string> = {
 
 export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitacaoId: string; onVoltar: () => void }) {
   const { usuario } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [solicitacao, setSolicitacao] = useState<SolicitacaoDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -97,6 +103,7 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
   const [avaliado, setAvaliado] = useState(false);
   const [mostrarReagendar, setMostrarReagendar] = useState(false);
   const [mostrarComprovante, setMostrarComprovante] = useState(false);
+  const [mostrarAvaliacoes, setMostrarAvaliacoes] = useState(false);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -276,9 +283,13 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
           </View>
 
           {proximoPasso(solicitacao.status, souAutonomo ? "autonomo" : "cliente") && (
-            <Text style={styles.proximoPasso}>
-              → {proximoPasso(solicitacao.status, souAutonomo ? "autonomo" : "cliente")}
-            </Text>
+            <View style={styles.proximoPassoLinha}>
+              {solicitacao.status === "aceito_pelo_autonomo" && <RelogioAnimado color={colors.primary} />}
+              {solicitacao.status === "visita_agendada" && <Ionicons name="calendar" size={15} color={colors.primary} />}
+              <Text style={styles.proximoPasso}>
+                → {proximoPasso(solicitacao.status, souAutonomo ? "autonomo" : "cliente")}
+              </Text>
+            </View>
           )}
 
           <Text style={styles.descricao}>{solicitacao.descricao}</Text>
@@ -297,8 +308,26 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>{souAutonomo ? "Cliente" : "Autônomo"}</Text>
               <Text style={styles.cardTexto}>{outraParte.nome}</Text>
-              {notaOutraParte !== undefined && <AvaliacaoBadge nota={notaOutraParte} />}
+              {notaOutraParte !== undefined && (
+                <TouchableOpacity
+                  onPress={() => setMostrarAvaliacoes(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Ver avaliações de ${outraParte.nome}`}
+                >
+                  <AvaliacaoBadge nota={notaOutraParte} />
+                </TouchableOpacity>
+              )}
             </View>
+          )}
+
+          {outraParte && (
+            <AvaliacoesModal
+              visivel={mostrarAvaliacoes}
+              usuarioId={outraParte.id}
+              nome={outraParte.nome}
+              notaMedia={Number(notaOutraParte ?? 0)}
+              onFechar={() => setMostrarAvaliacoes(false)}
+            />
           )}
 
           {/* Agendar visita — autônomo, logo após aceitar */}
@@ -572,13 +601,15 @@ export function SolicitacaoDetailScreen({ solicitacaoId, onVoltar }: { solicitac
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   centro: { flex: 1, alignItems: "center", justifyContent: "center" },
   voltar: { marginTop: spacing.md, marginBottom: spacing.sm },
   voltarTexto: { color: colors.primary, fontWeight: "700" },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  proximoPasso: { color: colors.primary, fontWeight: "700", fontSize: 13, marginTop: spacing.sm },
+  proximoPasso: { color: colors.primary, fontWeight: "700", fontSize: 13 },
+  proximoPassoLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginTop: spacing.sm },
   badge: {
     alignSelf: "flex-start",
     backgroundColor: colors.secondaryLight,
@@ -644,4 +675,5 @@ const styles = StyleSheet.create({
   comprovanteDivisor: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   cancelarBloco: { marginTop: spacing.sm, marginBottom: spacing.xl },
   linkCancelar: { color: "#C62828", fontWeight: "600", textAlign: "center" },
-});
+  });
+}

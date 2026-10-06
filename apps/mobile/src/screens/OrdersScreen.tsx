@@ -1,11 +1,16 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { labelStatus, proximoPasso } from "@/lib/status";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
+import { RelogioAnimado } from "@/components/RelogioAnimado";
+import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
+import { AvaliacoesModal } from "@/components/AvaliacoesModal";
 
 interface Solicitacao {
   id: string;
@@ -15,8 +20,8 @@ interface Solicitacao {
   criadoEm: string;
   disponibilidade: { dia: string; periodo: string }[];
   endereco: { bairro: string; cidade: string };
-  cliente: { nome: string } | null;
-  autonomo: { nome: string } | null;
+  cliente: { id: string; nome: string; avaliacaoMediaCliente: number | string } | null;
+  autonomo: { id: string; nome: string; avaliacaoMediaAutonomo: number | string } | null;
   visitaTecnica: { dataHora: string } | null;
 }
 
@@ -58,9 +63,12 @@ interface Props {
 }
 
 export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const abas = papel === "autonomo" ? ABAS_AUTONOMO : ABAS_CLIENTE;
   const [abaAtiva, setAbaAtiva] = useState(abas[0]);
+  const [avaliacaoAberta, setAvaliacaoAberta] = useState<{ id: string; nome: string; nota: number } | null>(null);
 
   // Recarrega sempre que a aba ganha foco (ex.: voltando de "Nova Solicitação"
   // ou depois de aceitar um pedido), não só na primeira montagem — evita ter
@@ -96,6 +104,15 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
             const outraParte = papel === "autonomo" ? item.cliente : item.autonomo;
             const passo = proximoPasso(item.status, papel);
             const preferencia = formatarPreferencia(item.disponibilidade);
+            // Visual do "próximo passo" troca de texto por ícone nos dois
+            // estados de espera mais comuns (sugestão do professor): um
+            // relógio pulsando enquanto a visita não é agendada, e um
+            // calendário depois que ela é. Quando o serviço já foi
+            // concluído, a linha vira a nota do outro lado — tocar abre o
+            // histórico completo de avaliações dele.
+            const notaOutraParte = outraParte
+              ? Number(papel === "autonomo" ? (outraParte as { avaliacaoMediaCliente: number | string }).avaliacaoMediaCliente : (outraParte as { avaliacaoMediaAutonomo: number | string }).avaliacaoMediaAutonomo)
+              : 0;
             return (
               <TouchableOpacity style={styles.card} onPress={() => onAbrirSolicitacao(item.id)}>
                 <View style={styles.cardHeader}>
@@ -116,14 +133,31 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
                   </Text>
                 )}
                 {item.visitaTecnica ? (
-                  <Text style={styles.infoExtra}>Visita agendada: {formatarDataHora(item.visitaTecnica.dataHora)}</Text>
+                  <View style={styles.infoExtraLinha}>
+                    <Ionicons name="calendar-outline" size={13} color={colors.muted} />
+                    <Text style={[styles.infoExtra, styles.semMargemTopo]}>Visita agendada: {formatarDataHora(item.visitaTecnica.dataHora)}</Text>
+                  </View>
                 ) : (
                   preferencia && <Text style={styles.infoExtra}>Preferência do cliente: {preferencia}</Text>
                 )}
-                {passo && (
-                  <View style={styles.proximoPassoLinha}>
-                    <Text style={styles.proximoPassoTexto}>→ {passo}</Text>
-                  </View>
+
+                {item.status === "concluido" && outraParte ? (
+                  <TouchableOpacity
+                    style={styles.proximoPassoLinha}
+                    onPress={() => setAvaliacaoAberta({ id: outraParte.id, nome: outraParte.nome, nota: notaOutraParte })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver avaliações de ${outraParte.nome}`}
+                  >
+                    <AvaliacaoBadge nota={notaOutraParte} />
+                  </TouchableOpacity>
+                ) : (
+                  passo && (
+                    <View style={[styles.proximoPassoLinha, styles.proximoPassoComIcone]}>
+                      {item.status === "aceito_pelo_autonomo" && <RelogioAnimado color={colors.primary} />}
+                      {item.status === "visita_agendada" && <Ionicons name="calendar" size={15} color={colors.primary} />}
+                      <Text style={styles.proximoPassoTexto}>→ {passo}</Text>
+                    </View>
+                  )
                 )}
               </TouchableOpacity>
             );
@@ -131,11 +165,22 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
           ListEmptyComponent={<Text style={styles.vazio}>Nenhum pedido nesta categoria.</Text>}
         />
       </ResponsiveContent>
+
+      {avaliacaoAberta && (
+        <AvaliacoesModal
+          visivel
+          usuarioId={avaliacaoAberta.id}
+          nome={avaliacaoAberta.nome}
+          notaMedia={avaliacaoAberta.nota}
+          onFechar={() => setAvaliacaoAberta(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   abas: { flexDirection: "row", gap: spacing.md, marginTop: spacing.md, flexWrap: "wrap" },
@@ -156,12 +201,16 @@ const styles = StyleSheet.create({
   statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink },
   infoExtra: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
+  infoExtraLinha: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.xs },
+  semMargemTopo: { marginTop: 0 },
   proximoPassoLinha: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  proximoPassoComIcone: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   proximoPassoTexto: { color: colors.primary, fontSize: 12.5, fontWeight: "700" },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
-});
+  });
+}
