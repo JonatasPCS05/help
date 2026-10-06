@@ -1,9 +1,6 @@
-import { Alert } from "react-native";
-
-// Versão iOS/Android: usa o diálogo nativo do sistema.
-export function confirmarAcao(titulo: string, mensagem: string, aoConfirmar: () => void) {
-  Alert.alert(titulo, mensagem, [
-    { text: "Cancelar", style: "cancel" },
-    { text: "Confirmar", style: "destructive", onPress: aoConfirmar },
-  ]);
-}
+// Reexporta o modal custom (ver components/ConfirmModal.tsx) — era um
+// Alert.alert nativo + window.confirm separado por plataforma antes, mas
+// o confirm() cru do navegador destoava completamente do resto do app, e
+// o professor pediu pra todo alerta ter o mesmo estilo. Um único arquivo
+// cross-platform agora resolve as duas plataformas.
+export { confirmarAcao } from "@/components/ConfirmModal";
