@@ -1,9 +1,19 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { autenticar } from "../middleware/auth";
 import { ApiHttpError } from "../middleware/errorHandler";
 import { enviarNotificacao } from "../services/notificacao.service";
+import { senhaForteRegex } from "./auth";
+import {
+  RESET_TENTATIVAS_MAXIMAS,
+  RESET_TOKEN_VALIDADE_MS,
+  emailConfigurado,
+  enviarCodigoEmail,
+  gerarCodigo,
+  hashCodigo,
+} from "../services/resetSenha.service";
 
 export const usuariosRouter = Router();
 
@@ -29,17 +39,108 @@ const atualizarPerfilSchema = z.object({
   nome: z.string().min(2).optional(),
   telefone: z.string().optional(),
   fotoUrl: z.string().url().optional(),
+  email: z.string().email().optional(),
 });
 
 usuariosRouter.patch("/me", async (req, res, next) => {
   try {
     const dados = atualizarPerfilSchema.parse(req.body);
+
+    if (dados.email) {
+      const emailEmUso = await prisma.usuario.findFirst({
+        where: { email: dados.email, id: { not: req.user!.sub } },
+      });
+      if (emailEmUso) throw new ApiHttpError(409, "email_em_uso", "E-mail já cadastrado em outra conta");
+    }
+
     const usuario = await prisma.usuario.update({
       where: { id: req.user!.sub },
       data: dados,
     });
     const { senhaHash, ...resto } = usuario;
     res.json(resto);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const solicitarCodigoSenhaSchema = z.object({
+  senhaAtual: z.string().min(1),
+});
+
+// Alterar senha (logado) exige confirmar a senha atual E um código
+// enviado por e-mail (segunda etapa) — diferente do "esqueci minha senha"
+// (sem sessão), aqui já sabemos quem é o usuário, então usa req.user
+// direto em vez de pedir e-mail de novo.
+usuariosRouter.post("/me/senha/solicitar-codigo", async (req, res, next) => {
+  try {
+    const { senhaAtual } = solicitarCodigoSenhaSchema.parse(req.body);
+    const usuario = await prisma.usuario.findUnique({ where: { id: req.user!.sub } });
+
+    if (!usuario?.senhaHash || !(await bcrypt.compare(senhaAtual, usuario.senhaHash))) {
+      throw new ApiHttpError(401, "senha_atual_invalida", "Senha atual incorreta");
+    }
+
+    const codigo = gerarCodigo();
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        resetSenhaTokenHash: hashCodigo(codigo),
+        resetSenhaExpiraEm: new Date(Date.now() + RESET_TOKEN_VALIDADE_MS),
+        resetSenhaTentativas: 0,
+      },
+    });
+
+    await enviarCodigoEmail({
+      destinatario: usuario.email,
+      codigo,
+      assunto: "Código para confirmar a alteração de senha",
+      introducao: "Use o código abaixo pra confirmar a alteração de senha da sua conta HelpMate:",
+    });
+
+    const respostaGenerica = { message: "Enviamos um código de confirmação pro seu e-mail." };
+    res.json(emailConfigurado ? respostaGenerica : { ...respostaGenerica, devToken: codigo });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const confirmarAlteracaoSenhaSchema = z.object({
+  token: z.string().min(1),
+  novaSenha: z
+    .string()
+    .min(8)
+    .regex(senhaForteRegex, "Senha deve ter letra maiúscula, minúscula, número e caractere especial"),
+});
+
+usuariosRouter.post("/me/senha/confirmar", async (req, res, next) => {
+  try {
+    const { token, novaSenha } = confirmarAlteracaoSenhaSchema.parse(req.body);
+    const usuario = await prisma.usuario.findUnique({ where: { id: req.user!.sub } });
+
+    if (!usuario || !usuario.resetSenhaExpiraEm || usuario.resetSenhaExpiraEm.getTime() < Date.now()) {
+      throw new ApiHttpError(400, "codigo_invalido_ou_expirado", "Código inválido ou expirado. Solicite um novo.");
+    }
+
+    if (usuario.resetSenhaTentativas >= RESET_TENTATIVAS_MAXIMAS) {
+      throw new ApiHttpError(429, "muitas_tentativas", "Muitas tentativas com esse código. Solicite um novo.");
+    }
+
+    if (usuario.resetSenhaTokenHash !== hashCodigo(token)) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { resetSenhaTentativas: { increment: 1 } },
+      });
+      throw new ApiHttpError(400, "codigo_invalido_ou_expirado", "Código inválido ou expirado. Solicite um novo.");
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, 10);
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { senhaHash, resetSenhaTokenHash: null, resetSenhaExpiraEm: null, resetSenhaTentativas: 0 },
+    });
+
+    res.json({ message: "Senha alterada com sucesso." });
   } catch (error) {
     next(error);
   }

@@ -1,18 +1,23 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { Resend } from "resend";
 import { z } from "zod";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { signJwt } from "../lib/jwt";
 import { env } from "../lib/env";
 import { ApiHttpError } from "../middleware/errorHandler";
+import {
+  RESET_TENTATIVAS_MAXIMAS,
+  RESET_TOKEN_VALIDADE_MS,
+  emailConfigurado,
+  enviarCodigoEmail,
+  gerarCodigo,
+  hashCodigo,
+} from "../services/resetSenha.service";
 
 export const authRouter = Router();
 
 const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
-const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 const cpfRegex = /^\d{11}$/;
 
@@ -32,7 +37,7 @@ function toJwtPayload(usuario: {
   };
 }
 
-const senhaForteRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+export const senhaForteRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 const registroSchema = z.object({
   nome: z.string().min(2),
@@ -174,17 +179,6 @@ authRouter.post("/google", async (req, res, next) => {
   }
 });
 
-const RESET_TOKEN_VALIDADE_MS = 30 * 60 * 1000;
-const RESET_TENTATIVAS_MAXIMAS = 5;
-
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-function gerarCodigoReset(): string {
-  return crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
-}
-
 const esqueciSenhaSchema = z.object({
   email: z.string().email(),
 });
@@ -205,36 +199,24 @@ authRouter.post("/esqueci-senha", async (req, res, next) => {
       return;
     }
 
-    const codigo = gerarCodigoReset();
+    const codigo = gerarCodigo();
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
-        resetSenhaTokenHash: hashToken(codigo),
+        resetSenhaTokenHash: hashCodigo(codigo),
         resetSenhaExpiraEm: new Date(Date.now() + RESET_TOKEN_VALIDADE_MS),
         resetSenhaTentativas: 0,
       },
     });
 
-    if (resend) {
-      try {
-        await resend.emails.send({
-          from: env.EMAIL_FROM,
-          to: usuario.email,
-          subject: "Código para redefinir sua senha — HelpMate",
-          html: `
-            <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-              <h2 style="color: #388E3C;">Redefinir senha</h2>
-              <p>Use o código abaixo pra redefinir a senha da sua conta HelpMate:</p>
-              <p style="font-size: 36px; font-weight: bold; letter-spacing: 8px; background: #F1F8E9; padding: 16px; border-radius: 8px; text-align: center;">${codigo}</p>
-              <p style="color: #666; font-size: 13px;">Esse código expira em 30 minutos. Se você não pediu essa redefinição, pode ignorar este e-mail.</p>
-            </div>
-          `,
-        });
-      } catch (erroEnvio) {
-        // Falha de envio não deve vazar pro cliente (evitaria diferenciar
-        // e-mails existentes de inexistentes) — só logamos pra investigar.
-        console.error("Falha ao enviar e-mail de redefinição de senha", erroEnvio);
-      }
+    await enviarCodigoEmail({
+      destinatario: usuario.email,
+      codigo,
+      assunto: "Código para redefinir sua senha",
+      introducao: "Use o código abaixo pra redefinir a senha da sua conta HelpMate:",
+    });
+
+    if (emailConfigurado) {
       res.json(respostaGenerica);
       return;
     }
@@ -276,7 +258,7 @@ authRouter.post("/resetar-senha", async (req, res, next) => {
       throw new ApiHttpError(429, "muitas_tentativas", "Muitas tentativas com esse código. Solicite um novo.");
     }
 
-    if (usuario.resetSenhaTokenHash !== hashToken(token)) {
+    if (usuario.resetSenhaTokenHash !== hashCodigo(token)) {
       await prisma.usuario.update({
         where: { id: usuario.id },
         data: { resetSenhaTentativas: { increment: 1 } },
