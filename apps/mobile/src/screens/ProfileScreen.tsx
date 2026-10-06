@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch, ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
 import { confirmarAcao } from "@/lib/confirm";
@@ -23,6 +25,8 @@ interface Props {
 
 export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistorico, onAbrirPagamentos }: Props) {
   const { usuario, sair, recarregarUsuario, modo } = useAuth();
+  const { colors, modo: modoTema, alternarTema } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
@@ -179,8 +183,25 @@ export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistori
             <Text style={styles.menuItem}>Histórico</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onAbrirPagamentos}>
-            <Text style={[styles.menuItem, styles.menuItemUltimo]}>Pagamentos</Text>
+            <Text style={styles.menuItem}>Pagamentos</Text>
           </TouchableOpacity>
+          <View style={[styles.menuItem, styles.menuItemUltimo, styles.temaLinha]}>
+            <View style={styles.temaLabelLinha}>
+              <Ionicons
+                name={modoTema === "escuro" ? "moon" : "sunny"}
+                size={16}
+                color={modoTema === "escuro" ? colors.primary : "#F9A825"}
+              />
+              <Text style={styles.temaLabel}>Modo {modoTema === "escuro" ? "escuro" : "claro"}</Text>
+            </View>
+            <Switch
+              value={modoTema === "escuro"}
+              onValueChange={alternarTema}
+              trackColor={{ true: colors.primary }}
+              accessibilityLabel="Alternar modo claro/escuro"
+              accessibilityRole="switch"
+            />
+          </View>
         </View>
 
         {modo === "autonomo" && (
@@ -274,7 +295,8 @@ export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistori
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   header: { alignItems: "center", marginTop: spacing.lg, marginBottom: spacing.lg },
   avatar: {
@@ -303,6 +325,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   menuItemUltimo: { borderBottomWidth: 0 },
+  temaLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  temaLabelLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  temaLabel: { color: colors.ink, fontWeight: "600" },
   autonomoCard: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.lg },
   requisitosBloco: {
     backgroundColor: colors.tertiaryLight,
@@ -349,4 +374,5 @@ const styles = StyleSheet.create({
   ctaSubtitulo: { color: colors.muted, marginTop: spacing.sm, fontSize: 12 },
   sair: { marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.md },
   sairTexto: { color: colors.muted, fontWeight: "600" },
-});
+  });
+}

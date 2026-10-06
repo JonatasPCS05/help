@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,7 +7,8 @@ import { apiFetch, ApiClientError } from "@/lib/api";
 import { uploadImagem } from "@/lib/upload";
 import { formatarCnpj } from "@/lib/format";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface SolicitacaoAutonomo {
   id: string;
@@ -22,6 +23,8 @@ const LABEL_STATUS: Record<string, string> = {
 };
 
 export function BecomeAutonomoScreen({ onVoltar }: { onVoltar: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [carregando, setCarregando] = useState(true);
   const [solicitacao, setSolicitacao] = useState<SolicitacaoAutonomo | null>(null);
 
@@ -165,7 +168,8 @@ export function BecomeAutonomoScreen({ onVoltar }: { onVoltar: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   centro: { flex: 1, alignItems: "center", justifyContent: "center" },
   voltar: { color: colors.primary, fontWeight: "600", marginTop: spacing.md },
@@ -209,4 +213,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
-});
+  });
+}

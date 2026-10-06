@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "@/hooks/useResponsive";
 import { apiFetch } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Props {
   onEntrar: () => void;
@@ -79,6 +80,8 @@ const BENEFICIOS: { icone: keyof typeof Ionicons.glyphMap; titulo: string; texto
 
 export function LandingScreen({ onEntrar }: Props) {
   const { isWide } = useResponsive();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
@@ -154,7 +157,8 @@ export function LandingScreen({ onEntrar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   scroll: { flexGrow: 1 },
   hero: {
@@ -244,4 +248,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   ctaFinalTitulo: { fontSize: 17, fontWeight: "700", color: colors.primaryDark, textAlign: "center" },
-});
+  });
+}

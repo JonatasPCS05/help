@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiFetch, ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function ResetPasswordScreen({ email, tokenInicial, onConcluido, onVoltar }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [token, setToken] = useState(tokenInicial ?? "");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -129,38 +132,40 @@ export function ResetPasswordScreen({ email, tokenInicial, onConcluido, onVoltar
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
-  card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
-  title: { textAlign: "center", fontSize: 22, fontWeight: "700", color: colors.primary },
-  subtitle: { textAlign: "center", color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
-  subtitleDestaque: { color: colors.ink, fontWeight: "700" },
-  label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
-  dica: { fontSize: 11, color: colors.muted, marginTop: -spacing.sm, marginBottom: spacing.md },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-    color: colors.ink,
-  },
-  inputCodigo: {
-    fontSize: 28,
-    fontWeight: "700",
-    letterSpacing: 12,
-    textAlign: "center",
-    color: colors.primary,
-  },
-  erro: { color: "#C62828", marginBottom: spacing.sm },
-  botaoPrimario: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginTop: spacing.xs,
-  },
-  botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
-  rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
-});
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
+    card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
+    title: { textAlign: "center", fontSize: 22, fontWeight: "700", color: colors.primary },
+    subtitle: { textAlign: "center", color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
+    subtitleDestaque: { color: colors.ink, fontWeight: "700" },
+    label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
+    dica: { fontSize: 11, color: colors.muted, marginTop: -spacing.sm, marginBottom: spacing.md },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+      color: colors.ink,
+    },
+    inputCodigo: {
+      fontSize: 28,
+      fontWeight: "700",
+      letterSpacing: 12,
+      textAlign: "center",
+      color: colors.primary,
+    },
+    erro: { color: "#C62828", marginBottom: spacing.sm },
+    botaoPrimario: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      marginTop: spacing.xs,
+    },
+    botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
+    rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
+  });
+}

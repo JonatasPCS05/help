@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch, ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
 
@@ -16,6 +17,8 @@ interface SolicitacaoDisponivel {
 }
 
 export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDisponivel[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -118,7 +121,8 @@ export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) =>
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   subtitulo: { color: colors.muted, marginTop: spacing.xs },
@@ -152,4 +156,5 @@ const styles = StyleSheet.create({
   botaoAceitar: { flex: 1, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.sm, alignItems: "center" },
   botaoAceitarTexto: { color: colors.white, fontWeight: "700" },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
-});
+  });
+}

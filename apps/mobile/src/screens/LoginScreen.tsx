@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { ApiClientError } from "@/lib/api";
 import { formatarCpf } from "@/lib/format";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: () => void; onEsqueciSenha: () => void }) {
   const { entrar, entrarComGoogle } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -153,7 +156,8 @@ export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: ()
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
   card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
   logo: {
@@ -192,4 +196,5 @@ const styles = StyleSheet.create({
   divisorTraco: { flex: 1, height: 1, backgroundColor: colors.border },
   divisorTexto: { color: colors.muted, fontSize: 12 },
   rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
-});
+  });
+}

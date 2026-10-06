@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,7 +7,8 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { marcarComoVisto } from "@/lib/chatVisto";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Mensagem {
   id: string;
@@ -31,6 +32,8 @@ interface Props {
 
 export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar }: Props) {
   const { usuario } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [texto, setTexto] = useState("");
@@ -145,7 +148,8 @@ export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar 
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   conteudo: { paddingHorizontal: spacing.lg },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
@@ -186,4 +190,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-});
+  });
+}

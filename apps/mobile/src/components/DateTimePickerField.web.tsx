@@ -1,5 +1,6 @@
 import { createElement } from "react";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Props {
   value: Date | null;
@@ -16,6 +17,7 @@ function paraDataHoraLocalInput(data: Date): string {
 // Versão web: usa <input type="datetime-local"> nativo do navegador — mesmo
 // padrão de DatePickerField.web.tsx, mas incluindo a hora.
 export function DateTimePickerField({ value, onChange, minimumDate, style }: Props) {
+  const { colors } = useTheme();
   return createElement("input", {
     type: "datetime-local",
     value: value ? paraDataHoraLocalInput(value) : "",

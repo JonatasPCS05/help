@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiFetch, ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { paraDataISO } from "@/lib/data";
 import { formatarCep } from "@/lib/format";
 import { buscarEnderecoPorCep } from "@/lib/cep";
@@ -41,6 +42,8 @@ const NOVO_ENDERECO_INICIAL = {
 // Formulário de nova solicitação (requisito 10): categoria, endereço,
 // descrição e disponibilidade.
 export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => void; onCancelar: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
   const [categoriaId, setCategoriaId] = useState<string | null>(null);
@@ -332,7 +335,8 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md, marginBottom: spacing.lg },
   label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
@@ -385,4 +389,5 @@ const styles = StyleSheet.create({
   botaoSecundarioTexto: { color: colors.ink, fontWeight: "600" },
   botaoPrimario: { flex: 1, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: "center" },
   botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
-});
+  });
+}

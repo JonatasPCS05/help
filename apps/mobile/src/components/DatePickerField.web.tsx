@@ -1,5 +1,6 @@
 import { createElement } from "react";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { paraDataISO } from "@/lib/data";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 // (<input type="date">) em vez disso — o Metro escolhe este arquivo
 // automaticamente quando o alvo de bundle é "web" (sufixo .web.tsx).
 export function DatePickerField({ value, onChange, minimumDate, style }: Props) {
+  const { colors } = useTheme();
   return createElement("input", {
     type: "date",
     value: value ? paraDataISO(value) : "",

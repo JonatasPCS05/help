@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, TouchableOpacity } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Props {
   value: Date | null;
@@ -18,6 +18,7 @@ function formatarDataHora(data: Date): string {
 // duas plataformas do seletor nativo, então pedimos em duas etapas —
 // primeiro a data, depois a hora — e combinamos num só Date.
 export function DateTimePickerField({ value, onChange, minimumDate, style }: Props) {
+  const { colors } = useTheme();
   const [etapa, setEtapa] = useState<"data" | "hora" | null>(null);
   const [dataParcial, setDataParcial] = useState<Date | null>(null);
 

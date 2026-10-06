@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, TouchableOpacity } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { paraDataISO } from "@/lib/data";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 
 // Versão iOS/Android: abre o seletor nativo do sistema operacional.
 export function DatePickerField({ value, onChange, minimumDate, style }: Props) {
+  const { colors } = useTheme();
   const [mostrar, setMostrar] = useState(false);
 
   return (

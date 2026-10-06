@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { confirmarAcao } from "@/lib/confirm";
 
 export interface SidebarItem {
@@ -21,6 +23,8 @@ interface Props {
 // o ativo destacado em laranja, "Sair" fixado embaixo.
 export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
   const { usuario, sair } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
 
   function confirmarSaida() {
     confirmarAcao("Sair da conta", "Tem certeza que deseja sair da sua conta?", sair);
@@ -71,7 +75,8 @@ export function AppSidebar({ itens, ativo, onSelecionar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: {
     width: 240,
     backgroundColor: colors.white,
@@ -108,4 +113,5 @@ const styles = StyleSheet.create({
   itemTextoAtivo: { color: colors.white },
   sair: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   sairTexto: { color: colors.muted, fontWeight: "600", fontSize: 13 },
-});
+  });
+}

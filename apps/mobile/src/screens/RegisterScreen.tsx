@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { ApiClientError } from "@/lib/api";
 import { formatarCpf, formatarTelefone } from "@/lib/format";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 export function RegisterScreen({ onVoltarLogin }: { onVoltarLogin: () => void }) {
   const { registrar } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
@@ -143,7 +146,8 @@ export function RegisterScreen({ onVoltarLogin }: { onVoltarLogin: () => void })
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   scroll: { flexGrow: 1, justifyContent: "center", padding: spacing.lg },
   card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
@@ -181,4 +185,5 @@ const styles = StyleSheet.create({
   },
   botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
   rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
-});
+  });
+}

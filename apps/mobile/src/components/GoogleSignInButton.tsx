@@ -6,7 +6,8 @@ import * as Crypto from "expo-crypto";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,6 +22,8 @@ interface Props {
 
 export function GoogleSignInButton({ onPrecisaCpf, onErro }: Props) {
   const { entrarComGoogle } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [processando, setProcessando] = useState(false);
   const nonce = useMemo(() => Crypto.randomUUID(), []);
 
@@ -78,15 +81,17 @@ export function GoogleSignInButton({ onPrecisaCpf, onErro }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  botao: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  conteudo: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  texto: { color: colors.ink, fontWeight: "600" },
-});
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
+    botao: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      marginTop: spacing.sm,
+    },
+    conteudo: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    texto: { color: colors.ink, fontWeight: "600" },
+  });
+}

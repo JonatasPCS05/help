@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +10,8 @@ import { ProfileStack } from "./ProfileStack";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsive } from "@/hooks/useResponsive";
-import { colors } from "@/theme";
+import { type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -67,6 +68,8 @@ function renderizarTela(chave: string) {
 // mantemos a barra de abas embaixo — mesmas telas, layout diferente.
 function DesktopShell() {
   const { modo } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const telas = telasDisponiveis(modo);
   const [telaAtiva, setTelaAtiva] = useState(telas[0]);
 
@@ -82,6 +85,7 @@ function DesktopShell() {
 
 function MobileTabs() {
   const { modo } = useAuth();
+  const { colors } = useTheme();
 
   return (
     <Tab.Navigator
@@ -89,6 +93,7 @@ function MobileTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { backgroundColor: colors.white, borderTopColor: colors.border },
         tabBarIcon: ({ color, size }) => <Ionicons name={ICONS[route.name]} size={size} color={color} />,
       })}
     >
@@ -117,7 +122,9 @@ export function MainTabs() {
   return isWide ? <DesktopShell /> : <MobileTabs />;
 }
 
-const styles = StyleSheet.create({
-  desktopContainer: { flex: 1, flexDirection: "row", backgroundColor: colors.canvas },
-  desktopContent: { flex: 1 },
-});
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
+    desktopContainer: { flex: 1, flexDirection: "row", backgroundColor: colors.canvas },
+    desktopContent: { flex: 1 },
+  });
+}

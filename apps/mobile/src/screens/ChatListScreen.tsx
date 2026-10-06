@@ -1,11 +1,12 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { ultimaVezVisto } from "@/lib/chatVisto";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 
 interface Conversa {
@@ -33,6 +34,8 @@ interface Props {
 
 export function ChatListScreen({ onAbrirConversa }: Props) {
   const { usuario } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [naoLidas, setNaoLidas] = useState<Record<string, boolean>>({});
   const [carregando, setCarregando] = useState(true);
@@ -99,7 +102,8 @@ export function ChatListScreen({ onAbrirConversa }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
@@ -122,4 +126,5 @@ const styles = StyleSheet.create({
   preview: { color: colors.muted, marginTop: spacing.xs, fontSize: 13 },
   previewNaoLida: { color: colors.ink, fontWeight: "700" },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
-});
+  });
+}

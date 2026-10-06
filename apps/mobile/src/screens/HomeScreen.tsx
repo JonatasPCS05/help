@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,7 +7,8 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { ModoSwitcher } from "@/components/ModoSwitcher";
 import { apiFetch } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Categoria {
   id: string;
@@ -30,6 +31,8 @@ function formatarDataHora(iso: string): string {
 function HomeCliente({ onNovaSolicitacao }: { onNovaSolicitacao: () => void }) {
   const { usuario } = useAuth();
   const { isWide } = useResponsive();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
@@ -68,6 +71,8 @@ function HomeCliente({ onNovaSolicitacao }: { onNovaSolicitacao: () => void }) {
 
 function HomeAutonomo() {
   const { usuario } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [carregando, setCarregando] = useState(true);
   const [disponiveis, setDisponiveis] = useState(0);
   const [trabalhos, setTrabalhos] = useState<SolicitacaoAutonomo[]>([]);
@@ -138,6 +143,8 @@ function HomeAutonomo() {
 
 export function HomeScreen({ onNovaSolicitacao }: { onNovaSolicitacao: () => void }) {
   const { modo } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -148,7 +155,8 @@ export function HomeScreen({ onNovaSolicitacao }: { onNovaSolicitacao: () => voi
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   saudacao: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   subtitulo: { color: colors.muted, marginTop: spacing.xs },
@@ -207,4 +215,5 @@ const styles = StyleSheet.create({
   cardTexto: { color: colors.ink, fontWeight: "600" },
   cardMuted: { color: colors.muted, fontSize: 12, marginTop: 2 },
   vazio: { color: colors.muted, fontSize: 13 },
-});
+  });
+}

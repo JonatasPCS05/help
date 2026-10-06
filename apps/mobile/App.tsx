@@ -4,13 +4,14 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { LandingScreen } from "@/screens/LandingScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { RegisterScreen } from "@/screens/RegisterScreen";
 import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 import { MainTabs } from "@/navigation/MainTabs";
-import { colors } from "@/theme";
+import { ConfirmModalHost } from "@/components/ConfirmModal";
 
 // Nomes de rota (não o `options.title` da aba) é o que o React Navigation
 // usa por padrão pro <title> da aba do navegador — por isso aparecia
@@ -28,6 +29,7 @@ const TITULOS_ROTA: Record<string, string> = {
 
 function Root() {
   const { usuario, carregando } = useAuth();
+  const { colors } = useTheme();
   const [tela, setTela] = useState<"landing" | "login" | "registro" | "esqueci-senha" | "resetar-senha">("landing");
   const [emailReset, setEmailReset] = useState("");
   const [tokenReset, setTokenReset] = useState<string | undefined>(undefined);
@@ -79,19 +81,27 @@ function Root() {
   return <LoginScreen onCriarConta={() => setTela("registro")} onEsqueciSenha={() => setTela("esqueci-senha")} />;
 }
 
+function BarraDeStatus() {
+  const { modo } = useTheme();
+  return <StatusBar style={modo === "escuro" ? "light" : "dark"} />;
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer
-          documentTitle={{
-            formatter: (options, route) => TITULOS_ROTA[route?.name ?? ""] ?? options?.title ?? "HelpMate",
-          }}
-        >
-          <StatusBar style="dark" />
-          <Root />
-        </NavigationContainer>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NavigationContainer
+            documentTitle={{
+              formatter: (options, route) => TITULOS_ROTA[route?.name ?? ""] ?? options?.title ?? "HelpMate",
+            }}
+          >
+            <BarraDeStatus />
+            <Root />
+            <ConfirmModalHost />
+          </NavigationContainer>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

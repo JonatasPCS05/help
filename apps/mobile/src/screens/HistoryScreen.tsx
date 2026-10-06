@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -6,7 +6,8 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { labelStatus } from "@/lib/status";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Solicitacao {
   id: string;
@@ -24,6 +25,8 @@ const STATUS_FINALIZADOS = ["concluido", "cancelado", "recusado_pelo_autonomo", 
 
 export function HistoryScreen({ onVoltar, onAbrirSolicitacao }: { onVoltar: () => void; onAbrirSolicitacao: (id: string) => void }) {
   const { usuario } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [itens, setItens] = useState<ItemHistorico[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -90,7 +93,8 @@ export function HistoryScreen({ onVoltar, onAbrirSolicitacao }: { onVoltar: () =
   );
 }
 
-const styles = StyleSheet.create({
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   voltar: { color: colors.primary, fontWeight: "600", marginTop: spacing.md },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.sm },
@@ -112,4 +116,5 @@ const styles = StyleSheet.create({
   status: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   data: { color: colors.muted, fontSize: 12 },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
-});
+  });
+}

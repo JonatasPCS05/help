@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { apiFetch, ApiClientError } from "@/lib/api";
-import { colors, radius, spacing } from "@/theme";
+import { radius, spacing, type Colors } from "@/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Props {
   onVoltarLogin: () => void;
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export function ForgotPasswordScreen({ onVoltarLogin, onEnviado }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => criarStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -75,29 +78,31 @@ export function ForgotPasswordScreen({ onVoltarLogin, onEnviado }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
-  card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
-  title: { textAlign: "center", fontSize: 22, fontWeight: "700", color: colors.primary },
-  subtitle: { textAlign: "center", color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
-  label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-    color: colors.ink,
-  },
-  erro: { color: "#C62828", marginBottom: spacing.sm },
-  botaoPrimario: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginTop: spacing.xs,
-  },
-  botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
-  rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
-});
+function criarStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.canvas, justifyContent: "center", padding: spacing.lg },
+    card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, width: "100%", maxWidth: 420, alignSelf: "center" },
+    title: { textAlign: "center", fontSize: 22, fontWeight: "700", color: colors.primary },
+    subtitle: { textAlign: "center", color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.lg },
+    label: { fontSize: 12, color: colors.muted, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+      color: colors.ink,
+    },
+    erro: { color: "#C62828", marginBottom: spacing.sm },
+    botaoPrimario: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      marginTop: spacing.xs,
+    },
+    botaoPrimarioTexto: { color: colors.white, fontWeight: "700" },
+    rodape: { textAlign: "center", color: colors.primary, marginTop: spacing.lg, fontSize: 13 },
+  });
+}
