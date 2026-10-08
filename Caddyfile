@@ -13,6 +13,21 @@ admin.helpmate.com.br {
 helpmate.com.br, www.helpmate.com.br {
 	root * /srv/web
 	encode gzip
-	try_files {path} /index.html
-	file_server
+
+	# Assets de build (JS/CSS/fontes/imagens com hash no nome) nunca devem
+	# cair no fallback de SPA -- se o arquivo não existir, tem que retornar
+	# 404 de verdade. Sem isso, um asset faltando (por erro de deploy, por
+	# exemplo) volta como "200 OK" servindo o próprio index.html no lugar,
+	# e o service worker do PWA guarda esse HTML em cache permanente como
+	# se fosse o asset certo -- o navegador nunca mais tenta de novo, nem
+	# depois do deploy corrigido.
+	@assets path /_expo/* /assets/*
+	handle @assets {
+		file_server
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 }
