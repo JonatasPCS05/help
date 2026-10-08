@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch, ApiClientError } from "@/lib/api";
 import { radius, spacing, type Colors } from "@/theme";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
 
@@ -12,13 +13,19 @@ interface SolicitacaoDisponivel {
   id: string;
   descricao: string;
   categoria: { nome: string };
-  endereco: { bairro: string; cidade: string };
+  distanciaKm: number;
   cliente: { nome: string; avaliacaoMediaCliente: string | number };
+}
+
+function formatarDistancia(km: number): string {
+  if (km < 1) return "a menos de 1 km";
+  return `a aproximadamente ${km.toFixed(1).replace(".0", "")} km`;
 }
 
 export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
+  const { usuario } = useAuth();
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDisponivel[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -35,6 +42,16 @@ export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) =>
   // Recarrega sempre que a aba ganha foco, pra pegar novas solicitações
   // sem precisar sair e entrar no app.
   useFocusEffect(carregar);
+
+  // Recarrega também assim que as categorias atendidas mudam (ex.: o
+  // autônomo acabou de adicionar uma categoria no Perfil) — sem isso, em
+  // telas largas (desktop) onde essa aba pode ficar montada sem nunca
+  // perder o foco, a lista só atualizaria num refresh manual.
+  const categoriasAtendidas = usuario?.perfilAutonomo?.categorias.map((c) => c.categoria.id).join(",");
+  useEffect(() => {
+    if (categoriasAtendidas !== undefined) carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriasAtendidas]);
 
   async function responder(id: string, aceitar: boolean) {
     setProcessandoId(id);
@@ -82,9 +99,7 @@ export function IncomingRequestsScreen({ onAceito }: { onAceito: (id: string) =>
                 <AvaliacaoBadge nota={item.cliente.avaliacaoMediaCliente} tamanhoEstrela={13} />
               </View>
               <Text style={styles.badge}>{item.categoria.nome}</Text>
-              <Text style={styles.local}>
-                {item.endereco.bairro} - {item.endereco.cidade}
-              </Text>
+              <Text style={styles.local}>{formatarDistancia(item.distanciaKm)}</Text>
               <Text style={styles.descricao} numberOfLines={3}>
                 {item.descricao}
               </Text>

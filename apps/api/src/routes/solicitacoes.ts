@@ -172,32 +172,53 @@ solicitacoesRouter.get("/disponiveis", exigirRole("autonomo"), async (req, res, 
       },
       include: {
         categoria: true,
-        // Antes de aceitar, o autônomo só precisa saber a região — rua,
-        // número, complemento e CEP exatos só são liberados depois que
-        // ele aceita (GET /:id devolve o endereço completo nesse caso).
-        endereco: { select: { bairro: true, cidade: true, estado: true, latitude: true, longitude: true } },
+        // Antes de aceitar, o autônomo não vê a localização do cliente de
+        // jeito nenhum (nem bairro/cidade) — só a distância calculada
+        // abaixo. Endereço completo só é liberado depois que ele aceita
+        // (GET /:id devolve o endereço completo nesse caso).
+        endereco: { select: { latitude: true, longitude: true } },
         fotos: true,
         cliente: { select: { id: true, nome: true, avaliacaoMediaCliente: true } },
       },
-      orderBy: { criadoEm: "desc" },
     });
 
+    // Prioridade: mais perto primeiro; em caso de distâncias parecidas,
+    // desempata pela disponibilidade mais urgente (data mais próxima que
+    // o cliente pediu pro atendimento).
     const disponiveis = candidatas
-      .filter(
-        (solicitacao) =>
-          distanciaKm(
-            Number(perfil.latitudeAtual),
-            Number(perfil.longitudeAtual),
-            Number(solicitacao.endereco.latitude),
-            Number(solicitacao.endereco.longitude)
-          ) <= RAIO_BUSCA_KM
-      )
-      // latitude/longitude exatas também só servem pro cálculo acima —
-      // não precisam sair no JSON de resposta.
-      .map(({ endereco, ...resto }) => ({
-        ...resto,
-        endereco: { bairro: endereco.bairro, cidade: endereco.cidade, estado: endereco.estado },
-      }));
+      .map((solicitacao) => {
+        const { endereco, disponibilidade, ...resto } = solicitacao;
+        const distanciaKmCalculada = distanciaKm(
+          Number(perfil.latitudeAtual),
+          Number(perfil.longitudeAtual),
+          Number(endereco.latitude),
+          Number(endereco.longitude)
+        );
+        const primeiraData = Array.isArray(disponibilidade)
+          ? (disponibilidade[0] as { dia?: string } | undefined)?.dia
+          : undefined;
+        return {
+          ...resto,
+          disponibilidade,
+          distanciaKm: Math.round(distanciaKmCalculada * 10) / 10,
+          dataUrgencia: primeiraData ?? null,
+        };
+      })
+      .filter((solicitacao) => solicitacao.distanciaKm <= RAIO_BUSCA_KM)
+      .sort((a, b) => {
+        // Agrupa por km cheio: dentro da mesma "faixa" de distância, o
+        // pedido mais urgente (data de atendimento mais próxima) vem
+        // primeiro; faixas diferentes sempre respeitam a ordem de distância.
+        const faixaA = Math.floor(a.distanciaKm);
+        const faixaB = Math.floor(b.distanciaKm);
+        if (faixaA !== faixaB) return faixaA - faixaB;
+
+        const dataA = a.dataUrgencia ? new Date(a.dataUrgencia).getTime() : Infinity;
+        const dataB = b.dataUrgencia ? new Date(b.dataUrgencia).getTime() : Infinity;
+        if (dataA !== dataB) return dataA - dataB;
+
+        return a.distanciaKm - b.distanciaKm;
+      });
 
     res.json(disponiveis);
   } catch (error) {
