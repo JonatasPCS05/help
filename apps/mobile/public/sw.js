@@ -1,7 +1,7 @@
 // Service worker simples e conservador: cacheia o essencial pra permitir
 // abrir o app offline (ou com internet instável), sem tentar cachear tudo
 // nem interferir em chamadas à API (que precisam sempre ir pra rede).
-const CACHE_VERSION = "help-v1";
+const CACHE_VERSION = "help-v2";
 const PRECACHE_URLS = ["/", "/manifest.json", "/favicon-32.png", "/logo192.png"];
 
 self.addEventListener("install", (event) => {
