@@ -35,8 +35,6 @@ const NOVO_ENDERECO_INICIAL = {
   bairro: "",
   cidade: "",
   estado: "",
-  latitude: "-23.5505",
-  longitude: "-46.6333",
 };
 
 // Formulário de nova solicitação (requisito 10): categoria, endereço,
@@ -116,8 +114,6 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
           cidade: novoEndereco.cidade,
           estado: novoEndereco.estado.toUpperCase(),
           cep: novoEndereco.cep.replace(/\D/g, ""),
-          latitude: Number(novoEndereco.latitude),
-          longitude: Number(novoEndereco.longitude),
         }),
       });
       await carregarEnderecos();
@@ -259,25 +255,6 @@ export function NewRequestScreen({ onEnviado, onCancelar }: { onEnviado: () => v
               onChangeText={(v) => setNovoEndereco((n) => ({ ...n, complemento: v }))}
               placeholder="Complemento (opcional)"
               placeholderTextColor={colors.muted}
-            />
-            <Text style={styles.dica}>
-              Latitude/longitude usadas pra localizar profissionais na região (ajuste se souber as coordenadas exatas).
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={novoEndereco.latitude}
-              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, latitude: v }))}
-              placeholder="Latitude"
-              placeholderTextColor={colors.muted}
-              keyboardType="numbers-and-punctuation"
-            />
-            <TextInput
-              style={styles.input}
-              value={novoEndereco.longitude}
-              onChangeText={(v) => setNovoEndereco((n) => ({ ...n, longitude: v }))}
-              placeholder="Longitude"
-              placeholderTextColor={colors.muted}
-              keyboardType="numbers-and-punctuation"
             />
             <TouchableOpacity style={styles.botaoPrimario} onPress={salvarEndereco} disabled={salvandoEndereco}>
               {salvandoEndereco ? (

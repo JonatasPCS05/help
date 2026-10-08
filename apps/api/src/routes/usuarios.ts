@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { autenticar } from "../middleware/auth";
 import { ApiHttpError } from "../middleware/errorHandler";
 import { enviarNotificacao } from "../services/notificacao.service";
+import { geocodificarEndereco } from "../services/geocoding.service";
 import { senhaForteRegex } from "./auth";
 import {
   RESET_TENTATIVAS_MAXIMAS,
@@ -156,8 +157,6 @@ const enderecoSchema = z.object({
   cidade: z.string().min(1),
   estado: z.string().length(2),
   cep: z.string().min(8),
-  latitude: z.number(),
-  longitude: z.number(),
   principal: z.boolean().optional(),
 });
 
@@ -176,8 +175,21 @@ usuariosRouter.get("/me/enderecos", async (req, res, next) => {
 usuariosRouter.post("/me/enderecos", async (req, res, next) => {
   try {
     const dados = enderecoSchema.parse(req.body);
+
+    // Latitude/longitude não vêm do cliente — o usuário não tem motivo pra
+    // saber ou informar coordenadas, isso é um detalhe interno do sistema
+    // (usado só pro cálculo de distância entre cliente e autônomo).
+    const coordenadas = await geocodificarEndereco(dados);
+    if (!coordenadas) {
+      throw new ApiHttpError(
+        422,
+        "endereco_nao_localizado",
+        "Não foi possível localizar esse endereço automaticamente. Confira o CEP e tente novamente."
+      );
+    }
+
     const endereco = await prisma.endereco.create({
-      data: { ...dados, usuarioId: req.user!.sub },
+      data: { ...dados, ...coordenadas, usuarioId: req.user!.sub },
     });
     res.status(201).json(endereco);
   } catch (error) {

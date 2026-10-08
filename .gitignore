@@ -13,3 +13,4 @@ coverage/
 android/
 ios/
 *.tsbuildinfo
+.claude/settings.local.json
