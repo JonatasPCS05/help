@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -77,6 +77,7 @@ export function LandingScreen({ onEntrar, onCriarConta, onParaProfissionais, onB
         </View>
 
         <View style={styles.hero}>
+          <View style={[styles.heroLinha, isWide && styles.heroLinhaWide]}>
           <View style={styles.heroConteudo}>
             <Text style={styles.heroTitulo}>Encontre profissionais para resolver o que você precisa.</Text>
             <Text style={styles.heroTagline}>
@@ -110,6 +111,10 @@ export function LandingScreen({ onEntrar, onCriarConta, onParaProfissionais, onB
                 <Text style={styles.buscaBotaoTexto}>Ver profissionais</Text>
               </TouchableOpacity>
             </View>
+          </View>
+          {isWide && (
+            <Image source={require("@/assets/trabalhador-hero.png")} style={styles.heroFoto} resizeMode="contain" />
+          )}
           </View>
         </View>
 
@@ -201,7 +206,10 @@ function criarStyles(colors: Colors) {
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
-  heroConteudo: { maxWidth: 620, alignSelf: "center", width: "100%" },
+  heroLinha: { maxWidth: 620, alignSelf: "center", width: "100%" },
+  heroLinhaWide: { maxWidth: 1040, flexDirection: "row", alignItems: "center", gap: spacing.xl },
+  heroConteudo: { flex: 1 },
+  heroFoto: { width: 320, height: 320 },
   heroTitulo: { fontSize: 28, fontWeight: "700", color: colors.ink, lineHeight: 34 },
   heroTagline: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.lg },
 

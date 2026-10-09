@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -55,15 +55,22 @@ export function LandingProfissionalScreen({ onCriarPerfil, onVoltar }: Props) {
         </TouchableOpacity>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitulo}>Encontre clientes para os serviços que você oferece.</Text>
-          <Text style={styles.heroTagline}>
-            Crie seu perfil profissional, receba solicitações de serviços da sua região e gerencie todo o seu
-            trabalho pelo HelpMate.
-          </Text>
-          <TouchableOpacity style={styles.botaoHero} onPress={onCriarPerfil}>
-            <Ionicons name="briefcase-outline" size={16} color={colors.primary} />
-            <Text style={styles.botaoHeroTexto}>Criar perfil profissional</Text>
-          </TouchableOpacity>
+          <View style={[styles.heroLinha, isWide && styles.heroLinhaWide]}>
+            <View style={styles.heroTexto}>
+              <Text style={styles.heroTitulo}>Encontre clientes para os serviços que você oferece.</Text>
+              <Text style={styles.heroTagline}>
+                Crie seu perfil profissional, receba solicitações de serviços da sua região e gerencie todo o seu
+                trabalho pelo HelpMate.
+              </Text>
+              <TouchableOpacity style={styles.botaoHero} onPress={onCriarPerfil}>
+                <Ionicons name="briefcase-outline" size={16} color={colors.primary} />
+                <Text style={styles.botaoHeroTexto}>Criar perfil profissional</Text>
+              </TouchableOpacity>
+            </View>
+            {isWide && (
+              <Image source={require("@/assets/trabalhador-hero.png")} style={styles.heroFoto} resizeMode="contain" />
+            )}
+          </View>
         </View>
 
         <View style={[styles.corpo, isWide && styles.corpoWide]}>
@@ -118,7 +125,11 @@ function criarStyles(colors: Colors) {
       borderBottomLeftRadius: radius.xl,
       borderBottomRightRadius: radius.xl,
     },
-    heroTitulo: { color: colors.white, fontSize: 26, fontWeight: "700", textAlign: "center", maxWidth: 560, alignSelf: "center" },
+    heroLinha: { maxWidth: 560, alignSelf: "center", width: "100%" },
+    heroLinhaWide: { maxWidth: 1000, flexDirection: "row", alignItems: "center", gap: spacing.xl },
+    heroTexto: { flex: 1 },
+    heroFoto: { width: 280, height: 280 },
+    heroTitulo: { color: colors.white, fontSize: 26, fontWeight: "700", textAlign: "center" },
     heroTagline: {
       color: "rgba(255,255,255,0.9)",
       fontSize: 14,
@@ -126,8 +137,6 @@ function criarStyles(colors: Colors) {
       lineHeight: 21,
       marginTop: spacing.sm,
       marginBottom: spacing.lg,
-      maxWidth: 480,
-      alignSelf: "center",
     },
     botaoHero: {
       flexDirection: "row",

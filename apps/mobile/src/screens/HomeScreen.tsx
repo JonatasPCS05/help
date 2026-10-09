@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -110,13 +110,29 @@ function HomeCliente({ onNovaSolicitacao, onAbrirPedidos, onAbrirChat, onBuscarP
 
   return (
     <>
-      <Text style={styles.saudacao}>Olá, {usuario?.nome?.split(" ")[0] ?? ""}!</Text>
-      <Text style={styles.subtitulo}>O que você precisa hoje?</Text>
-      <ModoSwitcher />
-
-      <TouchableOpacity style={styles.cta} onPress={onNovaSolicitacao}>
-        <Text style={styles.ctaTexto}>+ Solicitar Serviço</Text>
-      </TouchableOpacity>
+      <View style={[styles.hero, isWide && styles.heroWide]}>
+        <View style={styles.heroTexto}>
+          <Text style={styles.heroEyebrow}>BEM-VINDO AO HELPMATE</Text>
+          <Text style={styles.saudacao}>Olá, {usuario?.nome?.split(" ")[0] ?? ""}!</Text>
+          <Text style={styles.subtitulo}>
+            Encontre profissionais confiáveis pra resolver o que você precisa, compare avaliações e solicite com
+            poucos cliques.
+          </Text>
+          <ModoSwitcher />
+          <TouchableOpacity style={styles.cta} onPress={onNovaSolicitacao}>
+            <Text style={styles.ctaTexto}>+ Solicitar Serviço</Text>
+          </TouchableOpacity>
+        </View>
+        {isWide && (
+          <View style={styles.heroFotoContainer}>
+            <Image source={require("@/assets/trabalhador-hero.png")} style={styles.heroFoto} resizeMode="contain" />
+            <View style={styles.heroBadge}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+              <Text style={styles.heroBadgeTexto}>Serviços com{"\n"}profissionais verificados</Text>
+            </View>
+          </View>
+        )}
+      </View>
 
       <View style={styles.statsGrade}>
         <StatCard icone="receipt-outline" numero={pedidosAbertos.length} label="Pedidos em aberto" onPress={onAbrirPedidos} />
@@ -365,14 +381,37 @@ function criarStyles(colors: Colors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
-  saudacao: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
+  hero: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    overflow: "hidden",
+  },
+  heroWide: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
+  heroTexto: { flex: 1 },
+  heroEyebrow: { color: colors.primaryDark, fontWeight: "700", fontSize: 11, letterSpacing: 1 },
+  heroFotoContainer: { width: 220, alignItems: "center" },
+  heroFoto: { width: 220, height: 220 },
+  heroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginTop: -spacing.lg,
+    maxWidth: 190,
+  },
+  heroBadgeTexto: { color: colors.ink, fontSize: 10.5, fontWeight: "600", lineHeight: 13 },
+  saudacao: { fontSize: 22, fontWeight: "700", color: colors.ink, marginTop: spacing.xs },
   subtitulo: { color: colors.muted, marginTop: spacing.xs },
   cta: {
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
     paddingVertical: spacing.md,
     alignItems: "center",
-    marginVertical: spacing.lg,
+    marginTop: spacing.md,
   },
   ctaTexto: { color: colors.white, fontWeight: "700", fontSize: 15 },
   secaoTitulo: { fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: spacing.sm, marginTop: spacing.lg },
