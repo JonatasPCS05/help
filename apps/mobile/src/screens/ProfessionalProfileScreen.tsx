@@ -97,6 +97,107 @@ export function ProfessionalProfileScreen({ autonomoId, onVoltar, onPedirOrcamen
     );
   }
 
+  const precoMinimo = perfil.categorias
+    .map((c) => (c.precoBase !== null ? Number(c.precoBase) : null))
+    .filter((v): v is number => v !== null)
+    .sort((a, b) => a - b)[0];
+
+  function pedirOrcamento() {
+    if (!usuario) {
+      onPrecisaEntrar();
+      return;
+    }
+    onPedirOrcamento(perfil!.categorias[0]?.nome ?? "");
+  }
+
+  const cartaoAcoes = (
+    <View style={styles.cartaoAcoes}>
+      {precoMinimo !== undefined && (
+        <>
+          <Text style={styles.precoLabel}>A partir de</Text>
+          <Text style={styles.precoValor}>R$ {precoMinimo.toFixed(0)}</Text>
+          <Text style={styles.precoSufixo}>por serviço</Text>
+        </>
+      )}
+      <TouchableOpacity style={styles.botaoPrimario} onPress={pedirOrcamento}>
+        <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.white} />
+        <Text style={styles.botaoPrimarioTexto}>Solicitar orçamento</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.botaoSecundario} onPress={alternarFavorito} disabled={alternandoFavorito}>
+        <Ionicons name={favoritado ? "heart" : "heart-outline"} size={16} color={colors.primary} />
+        <Text style={styles.botaoSecundarioTexto}>{favoritado ? "Salvo" : "Salvar profissional"}</Text>
+      </TouchableOpacity>
+      <View style={styles.avisoProtegido}>
+        <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
+        <Text style={styles.avisoOrcamento}>
+          Pagamento protegido pela plataforma. Sua solicitação é enviada pra profissionais da categoria disponíveis
+          na sua região — não é garantido que seja {perfil.usuario.nome.split(" ")[0]} quem aceita.
+        </Text>
+      </View>
+    </View>
+  );
+
+  const conteudoPrincipal = (
+    <>
+      {perfil.bio && (
+        <View style={styles.cartao}>
+          <Text style={styles.secaoTitulo}>Sobre o profissional</Text>
+          <Text style={styles.bioTexto}>{perfil.bio}</Text>
+        </View>
+      )}
+
+      <View style={styles.cartao}>
+        <Text style={styles.secaoTitulo}>Serviços oferecidos</Text>
+        <View style={styles.servicosGrade}>
+          {perfil.categorias.map((c) => (
+            <View key={c.nome} style={styles.servicoItem}>
+              <Text style={styles.servicoNome}>{c.nome}</Text>
+              {c.precoBase !== null && (
+                <Text style={styles.servicoPreco}>A partir de R$ {Number(c.precoBase).toFixed(0)}</Text>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {perfil.fotos.length > 0 && (
+        <View style={styles.cartao}>
+          <Text style={styles.secaoTitulo}>Portfólio</Text>
+          <View style={styles.portfolioGrade}>
+            {perfil.fotos.map((url) => (
+              <Image key={url} source={{ uri: url }} style={styles.portfolioFoto} />
+            ))}
+          </View>
+        </View>
+      )}
+
+      <View style={styles.cartao}>
+        <Text style={styles.secaoTitulo}>Avaliações de clientes</Text>
+        <View style={styles.avaliacaoResumo}>
+          <View style={styles.avaliacaoNumero}>
+            <Text style={styles.avaliacaoNumeroTexto}>{Number(perfil.avaliacaoMedia).toFixed(1)}</Text>
+            <AvaliacaoBadge nota={perfil.avaliacaoMedia} />
+            <Text style={styles.metaTexto}>{perfil.totalAvaliacoes} avaliações</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <RatingBreakdownBars resumo={{ total: perfil.totalAvaliacoes, porEstrela: perfil.porEstrela }} />
+          </View>
+        </View>
+
+        {perfil.avaliacoesRecentes.map((av) => (
+          <View key={av.id} style={styles.avaliacaoItem}>
+            <View style={styles.avaliacaoItemCabecalho}>
+              <Text style={styles.avaliacaoItemNome}>{av.avaliador.nome}</Text>
+              <AvaliacaoBadge nota={av.nota} tamanhoEstrela={12} tamanhoTexto={11} />
+            </View>
+            {av.comentario && <Text style={styles.avaliacaoItemComentario}>{av.comentario}</Text>}
+          </View>
+        ))}
+        {perfil.avaliacoesRecentes.length === 0 && <Text style={styles.vazio}>Ainda sem avaliações.</Text>}
+      </View>
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={[styles.scroll, isWide && styles.scrollWide]}>
@@ -134,85 +235,17 @@ export function ProfessionalProfileScreen({ autonomoId, onVoltar, onPedirOrcamen
           </View>
         </View>
 
-        <View style={styles.acoes}>
-          <TouchableOpacity
-            style={styles.botaoPrimario}
-            onPress={() => {
-              if (!usuario) {
-                onPrecisaEntrar();
-                return;
-              }
-              onPedirOrcamento(perfil.categorias[0]?.nome ?? "");
-            }}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.white} />
-            <Text style={styles.botaoPrimarioTexto}>Solicitar orçamento</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.botaoSecundario} onPress={alternarFavorito} disabled={alternandoFavorito}>
-            <Ionicons name={favoritado ? "heart" : "heart-outline"} size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.avisoOrcamento}>
-          Sua solicitação é enviada pra profissionais da categoria disponíveis na sua região — não é garantido que
-          seja {perfil.usuario.nome.split(" ")[0]} quem aceita.
-        </Text>
-
-        {perfil.bio && (
-          <View style={styles.cartao}>
-            <Text style={styles.secaoTitulo}>Sobre o profissional</Text>
-            <Text style={styles.bioTexto}>{perfil.bio}</Text>
+        {isWide ? (
+          <View style={styles.colunas}>
+            <View style={styles.colunaPrincipal}>{conteudoPrincipal}</View>
+            <View style={styles.colunaLateral}>{cartaoAcoes}</View>
           </View>
+        ) : (
+          <>
+            {cartaoAcoes}
+            {conteudoPrincipal}
+          </>
         )}
-
-        <View style={styles.cartao}>
-          <Text style={styles.secaoTitulo}>Serviços oferecidos</Text>
-          <View style={styles.servicosGrade}>
-            {perfil.categorias.map((c) => (
-              <View key={c.nome} style={styles.servicoItem}>
-                <Text style={styles.servicoNome}>{c.nome}</Text>
-                {c.precoBase !== null && (
-                  <Text style={styles.servicoPreco}>A partir de R$ {Number(c.precoBase).toFixed(0)}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {perfil.fotos.length > 0 && (
-          <View style={styles.cartao}>
-            <Text style={styles.secaoTitulo}>Portfólio</Text>
-            <View style={styles.portfolioGrade}>
-              {perfil.fotos.map((url) => (
-                <Image key={url} source={{ uri: url }} style={styles.portfolioFoto} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.cartao}>
-          <Text style={styles.secaoTitulo}>Avaliações de clientes</Text>
-          <View style={styles.avaliacaoResumo}>
-            <View style={styles.avaliacaoNumero}>
-              <Text style={styles.avaliacaoNumeroTexto}>{Number(perfil.avaliacaoMedia).toFixed(1)}</Text>
-              <AvaliacaoBadge nota={perfil.avaliacaoMedia} />
-              <Text style={styles.metaTexto}>{perfil.totalAvaliacoes} avaliações</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <RatingBreakdownBars resumo={{ total: perfil.totalAvaliacoes, porEstrela: perfil.porEstrela }} />
-            </View>
-          </View>
-
-          {perfil.avaliacoesRecentes.map((av) => (
-            <View key={av.id} style={styles.avaliacaoItem}>
-              <View style={styles.avaliacaoItemCabecalho}>
-                <Text style={styles.avaliacaoItemNome}>{av.avaliador.nome}</Text>
-                <AvaliacaoBadge nota={av.nota} tamanhoEstrela={12} tamanhoTexto={11} />
-              </View>
-              {av.comentario && <Text style={styles.avaliacaoItemComentario}>{av.comentario}</Text>}
-            </View>
-          ))}
-          {perfil.avaliacoesRecentes.length === 0 && <Text style={styles.vazio}>Ainda sem avaliações.</Text>}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -222,7 +255,7 @@ function criarStyles(colors: Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.canvas },
     scroll: { padding: spacing.lg, gap: spacing.md },
-    scrollWide: { maxWidth: 760, alignSelf: "center", width: "100%" },
+    scrollWide: { maxWidth: 980, alignSelf: "center", width: "100%" },
     voltar: { marginBottom: spacing.sm },
     vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.xl },
     topo: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
@@ -243,7 +276,6 @@ function criarStyles(colors: Colors) {
     categoriaPrincipal: { color: colors.muted, fontSize: 13, marginBottom: 4 },
     linhaMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
     metaTexto: { color: colors.muted, fontSize: 12 },
-    acoes: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
     botaoPrimario: {
       flex: 1,
       flexDirection: "row",
@@ -256,14 +288,30 @@ function criarStyles(colors: Colors) {
     },
     botaoPrimarioTexto: { color: colors.white, fontWeight: "700", fontSize: 13 },
     botaoSecundario: {
-      width: 44,
+      flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
+      gap: spacing.xs,
       borderRadius: radius.md,
+      paddingVertical: spacing.sm,
       borderWidth: 1,
       borderColor: colors.border,
     },
-    avisoOrcamento: { color: colors.muted, fontSize: 11, marginTop: -spacing.xs },
+    botaoSecundarioTexto: { color: colors.primary, fontWeight: "700", fontSize: 13 },
+    avisoOrcamento: { color: colors.muted, fontSize: 11, flex: 1, lineHeight: 16 },
+    avisoProtegido: { flexDirection: "row", gap: spacing.xs, alignItems: "flex-start" },
+    colunas: { flexDirection: "row", gap: spacing.lg, alignItems: "flex-start" },
+    colunaPrincipal: { flex: 1, gap: spacing.md },
+    colunaLateral: { width: 300 },
+    cartaoAcoes: {
+      backgroundColor: colors.white,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    precoLabel: { color: colors.muted, fontSize: 12 },
+    precoValor: { color: colors.ink, fontSize: 26, fontWeight: "700" },
+    precoSufixo: { color: colors.muted, fontSize: 12, marginTop: -6, marginBottom: spacing.xs },
     cartao: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
     secaoTitulo: { fontSize: 15, fontWeight: "700", color: colors.ink },
     bioTexto: { color: colors.ink, fontSize: 13, lineHeight: 20 },

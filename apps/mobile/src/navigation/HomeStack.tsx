@@ -3,6 +3,7 @@ import { HomeScreen } from "@/screens/HomeScreen";
 import { NewRequestScreen } from "@/screens/NewRequestScreen";
 import { BrowseProfessionalsScreen } from "@/screens/BrowseProfessionalsScreen";
 import { ProfessionalProfileScreen } from "@/screens/ProfessionalProfileScreen";
+import { useFavoritos } from "@/hooks/useFavoritos";
 
 export type HomeStackParamList = {
   HomeMain: undefined;
@@ -24,6 +25,8 @@ interface Props {
 }
 
 export function HomeStack({ onAbrirPedidos, onAbrirChat }: Props) {
+  const { favoritosIds, alternar } = useFavoritos();
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain">
@@ -47,6 +50,9 @@ export function HomeStack({ onAbrirPedidos, onAbrirChat }: Props) {
           <BrowseProfessionalsScreen
             onVoltar={() => navigation.goBack()}
             onVerPerfil={(autonomoId) => navigation.navigate("PerfilProfissional", { autonomoId })}
+            onSolicitarOrcamento={() => navigation.navigate("NewRequest")}
+            favoritosIds={favoritosIds}
+            onAlternarFavorito={alternar}
           />
         )}
       </Stack.Screen>

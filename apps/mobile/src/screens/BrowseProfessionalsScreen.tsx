@@ -19,6 +19,13 @@ interface Props {
   categoriaInicial?: string | null;
   onVerPerfil: (id: string) => void;
   onVoltar: () => void;
+  // Só vêm preenchidos quando a tela é montada já logada (dentro do
+  // HomeStack); no fluxo pré-login (landing) ficam de fora e o card só
+  // mostra "Ver perfil" -- pedir orçamento/favoritar sem conta não faz
+  // sentido, e quem tentar cai no perfil público, que já pede login.
+  onSolicitarOrcamento?: (autonomoId: string) => void;
+  favoritosIds?: string[];
+  onAlternarFavorito?: (autonomoId: string) => void;
 }
 
 const FILTROS_INICIAIS: FiltrosBusca = {
@@ -29,7 +36,15 @@ const FILTROS_INICIAIS: FiltrosBusca = {
   ordenar: "avaliacao",
 };
 
-export function BrowseProfessionalsScreen({ localizacaoInicial, categoriaInicial, onVerPerfil, onVoltar }: Props) {
+export function BrowseProfessionalsScreen({
+  localizacaoInicial,
+  categoriaInicial,
+  onVerPerfil,
+  onVoltar,
+  onSolicitarOrcamento,
+  favoritosIds,
+  onAlternarFavorito,
+}: Props) {
   const { colors } = useTheme();
   const { isWide } = useResponsive();
   const styles = useMemo(() => criarStyles(colors), [colors]);
@@ -114,7 +129,13 @@ export function BrowseProfessionalsScreen({ localizacaoInicial, categoriaInicial
               contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}
               ListEmptyComponent={<Text style={styles.vazio}>Nenhum profissional encontrado com esses filtros.</Text>}
               renderItem={({ item }) => (
-                <ProfessionalDirectoryCard profissional={item} onPress={() => onVerPerfil(item.id)} />
+                <ProfessionalDirectoryCard
+                  profissional={item}
+                  onPress={() => onVerPerfil(item.id)}
+                  onSolicitarOrcamento={onSolicitarOrcamento ? () => onSolicitarOrcamento(item.id) : undefined}
+                  favoritado={favoritosIds?.includes(item.id)}
+                  onAlternarFavorito={onAlternarFavorito ? () => onAlternarFavorito(item.id) : undefined}
+                />
               )}
             />
           )}

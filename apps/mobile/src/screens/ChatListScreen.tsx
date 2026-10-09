@@ -30,9 +30,14 @@ function formatarData(iso: string): string {
 
 interface Props {
   onAbrirConversa: (id: string, nome?: string, categoria?: string) => void;
+  // Usado no layout lado-a-lado de telas largas (ChatSplitView): destaca
+  // a conversa aberta no painel ao lado e evita o SafeAreaView duplicado
+  // (o próprio split view já cuida da borda superior).
+  conversaAtivaId?: string;
+  embutido?: boolean;
 }
 
-export function ChatListScreen({ onAbrirConversa }: Props) {
+export function ChatListScreen({ onAbrirConversa, conversaAtivaId, embutido }: Props) {
   const { usuario } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
@@ -62,18 +67,17 @@ export function ChatListScreen({ onAbrirConversa }: Props) {
     }, [usuario?.id])
   );
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ResponsiveContent>
-        <Text style={styles.titulo}>Chat</Text>
+  const conteudo = (
+    <>
+      {!embutido && <Text style={styles.titulo}>Chat</Text>}
 
-        <FlatList
+      <FlatList
           data={conversas}
           keyExtractor={(item) => item.solicitacaoId}
           contentContainerStyle={{ gap: spacing.md, paddingVertical: spacing.md }}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
+              style={[styles.card, conversaAtivaId === item.solicitacaoId && styles.cardAtivo]}
               onPress={() => onAbrirConversa(item.solicitacaoId, item.outraParte?.nome, item.categoria)}
             >
               <View style={styles.linhaPrincipal}>
@@ -107,8 +111,17 @@ export function ChatListScreen({ onAbrirConversa }: Props) {
               </Text>
             ) : null
           }
-        />
-      </ResponsiveContent>
+      />
+    </>
+  );
+
+  if (embutido) {
+    return <View style={styles.containerEmbutido}>{conteudo}</View>;
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ResponsiveContent>{conteudo}</ResponsiveContent>
     </SafeAreaView>
   );
 }
@@ -116,8 +129,10 @@ export function ChatListScreen({ onAbrirConversa }: Props) {
 function criarStyles(colors: Colors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
+  containerEmbutido: { flex: 1, paddingHorizontal: spacing.sm },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
+  cardAtivo: { backgroundColor: colors.primaryLight },
   linhaPrincipal: { flexDirection: "row", gap: spacing.sm },
   avatar: { width: 44, height: 44, borderRadius: radius.full },
   avatarFallback: {

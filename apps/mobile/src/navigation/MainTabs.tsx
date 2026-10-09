@@ -57,7 +57,7 @@ function renderizarTela(chave: string, onTrocarAba: (chave: string) => void) {
     case "Chat":
       return <ChatStack />;
     case "Profile":
-      return <ProfileStack />;
+      return <ProfileStack onAbrirPedidos={() => onTrocarAba("Orders")} onAbrirChat={() => onTrocarAba("Chat")} />;
     default:
       return null;
   }
@@ -119,7 +119,14 @@ function MobileTabs() {
         </Tab.Screen>
       )}
       <Tab.Screen name="Chat" component={ChatStack} options={{ title: "Chat" }} />
-      <Tab.Screen name="Profile" component={ProfileStack} options={{ title: "Profile" }} />
+      <Tab.Screen name="Profile" options={{ title: "Profile" }}>
+        {({ navigation }) => (
+          <ProfileStack
+            onAbrirPedidos={() => navigation.navigate(modo === "autonomo" ? "Trabalhos" : "Orders")}
+            onAbrirChat={() => navigation.navigate("Chat")}
+          />
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

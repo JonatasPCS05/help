@@ -96,6 +96,17 @@ function HomeCliente({ onNovaSolicitacao, onAbrirPedidos, onAbrirChat, onBuscarP
   );
 
   const pedidosAbertos = pedidos.filter((p) => STATUS_ABERTOS_CLIENTE.includes(p.status));
+  const favoritosIds = favoritos.map((f) => f.autonomo.id);
+
+  async function alternarFavorito(autonomoId: string) {
+    const favoritado = favoritosIds.includes(autonomoId);
+    try {
+      await apiFetch(`/favoritos/${autonomoId}`, { method: favoritado ? "DELETE" : "POST" });
+      apiFetch<Favorito[]>("/favoritos").then(setFavoritos).catch(() => {});
+    } catch {
+      // silencioso -- favoritar é conveniência, não ação crítica
+    }
+  }
 
   return (
     <>
@@ -202,7 +213,15 @@ function HomeCliente({ onNovaSolicitacao, onAbrirPedidos, onAbrirChat, onBuscarP
           </View>
           <Carousel>
             {destaques.map((p) => (
-              <ProfessionalDirectoryCard key={p.id} profissional={p} largura={200} onPress={() => onVerPerfilProfissional(p.id)} />
+              <ProfessionalDirectoryCard
+                key={p.id}
+                profissional={p}
+                largura={220}
+                onPress={() => onVerPerfilProfissional(p.id)}
+                onSolicitarOrcamento={onNovaSolicitacao}
+                favoritado={favoritosIds.includes(p.id)}
+                onAlternarFavorito={() => alternarFavorito(p.id)}
+              />
             ))}
           </Carousel>
         </>

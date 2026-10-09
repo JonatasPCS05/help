@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ChatListScreen } from "@/screens/ChatListScreen";
 import { ChatScreen } from "@/screens/ChatScreen";
+import { ChatSplitView } from "@/screens/ChatSplitView";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export type ChatStackParamList = {
   ChatMain: undefined;
@@ -10,6 +12,11 @@ export type ChatStackParamList = {
 const Stack = createNativeStackNavigator<ChatStackParamList>();
 
 export function ChatStack() {
+  // Tela larga: lista + conversa lado a lado, sem navegação de verdade.
+  // Estreita: continua uma tela por vez (padrão mobile).
+  const { isWide } = useResponsive();
+  if (isWide) return <ChatSplitView />;
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ChatMain">

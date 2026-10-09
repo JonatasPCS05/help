@@ -21,12 +21,31 @@ interface Props {
   onEditarPerfil: () => void;
   onAbrirHistorico: () => void;
   onAbrirPagamentos: () => void;
+  onAbrirFavoritos: () => void;
+  onAbrirPedidos?: () => void;
+  onAbrirChat?: () => void;
 }
 
-export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistorico, onAbrirPagamentos }: Props) {
+export function ProfileScreen({
+  onTornarAutonomo,
+  onEditarPerfil,
+  onAbrirHistorico,
+  onAbrirPagamentos,
+  onAbrirFavoritos,
+  onAbrirPedidos,
+  onAbrirChat,
+}: Props) {
   const { usuario, sair, recarregarUsuario, modo } = useAuth();
   const { colors, modo: modoTema, alternarTema } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
+  const [favoritosCount, setFavoritosCount] = useState(0);
+  const [conversasCount, setConversasCount] = useState(0);
+
+  useEffect(() => {
+    if (!usuario) return;
+    apiFetch<unknown[]>("/favoritos").then((l) => setFavoritosCount(l.length)).catch(() => {});
+    apiFetch<unknown[]>("/chat/conversas").then((l) => setConversasCount(l.length)).catch(() => {});
+  }, [usuario]);
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
@@ -197,6 +216,43 @@ export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistori
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </TouchableOpacity>
+          {modo === "cliente" && onAbrirPedidos && (
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onAbrirPedidos}>
+              <View style={styles.menuItemEsquerda}>
+                <Ionicons name="receipt-outline" size={17} color={colors.primary} />
+                <Text style={styles.menuItemTexto}>Meus Pedidos</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          )}
+          {modo === "cliente" && (
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onAbrirFavoritos}>
+              <View style={styles.menuItemEsquerda}>
+                <Ionicons name="heart-outline" size={17} color={colors.primary} />
+                <Text style={styles.menuItemTexto}>Favoritos</Text>
+              </View>
+              <View style={styles.menuItemDireita}>
+                {favoritosCount > 0 && <Text style={styles.menuItemContador}>{favoritosCount}</Text>}
+                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              </View>
+            </TouchableOpacity>
+          )}
+          {onAbrirChat && (
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onAbrirChat}>
+              <View style={styles.menuItemEsquerda}>
+                <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.primary} />
+                <Text style={styles.menuItemTexto}>Mensagens</Text>
+              </View>
+              <View style={styles.menuItemDireita}>
+                {conversasCount > 0 && (
+                  <View style={styles.menuItemBadge}>
+                    <Text style={styles.menuItemBadgeTexto}>{conversasCount}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              </View>
+            </TouchableOpacity>
+          )}
           <View style={[styles.menuItem, styles.menuItemUltimo, styles.temaLinha]}>
             <View style={styles.temaLabelLinha}>
               <Ionicons
@@ -337,6 +393,18 @@ function criarStyles(colors: Colors) {
   menuItemLinha: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   menuItemEsquerda: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   menuItemTexto: { color: colors.ink, fontWeight: "600" },
+  menuItemDireita: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  menuItemContador: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  menuItemBadge: {
+    backgroundColor: colors.erro,
+    borderRadius: radius.full,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  menuItemBadgeTexto: { color: colors.white, fontSize: 11, fontWeight: "700" },
   menuItemUltimo: { borderBottomWidth: 0 },
   temaLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   temaLabelLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },

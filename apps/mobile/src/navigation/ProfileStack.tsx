@@ -5,6 +5,8 @@ import { EditProfileScreen } from "@/screens/EditProfileScreen";
 import { HistoryScreen } from "@/screens/HistoryScreen";
 import { PaymentsScreen } from "@/screens/PaymentsScreen";
 import { SolicitacaoDetailScreen } from "@/screens/SolicitacaoDetailScreen";
+import { FavoritosScreen } from "@/screens/FavoritosScreen";
+import { ProfessionalProfileScreen } from "@/screens/ProfessionalProfileScreen";
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -13,11 +15,21 @@ export type ProfileStackParamList = {
   History: undefined;
   Payments: undefined;
   SolicitacaoDetail: { id: string };
+  Favoritos: undefined;
+  PerfilProfissional: { autonomoId: string };
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
-export function ProfileStack() {
+interface Props {
+  // Mesma ideia do HomeStack: navegação pras abas Pedidos/Chat resolvida
+  // de fora, já que desktop (troca manual de tela) e mobile (tabs de
+  // verdade) funcionam diferente.
+  onAbrirPedidos?: () => void;
+  onAbrirChat?: () => void;
+}
+
+export function ProfileStack({ onAbrirPedidos, onAbrirChat }: Props) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileMain">
@@ -27,6 +39,27 @@ export function ProfileStack() {
             onEditarPerfil={() => navigation.navigate("EditProfile")}
             onAbrirHistorico={() => navigation.navigate("History")}
             onAbrirPagamentos={() => navigation.navigate("Payments")}
+            onAbrirFavoritos={() => navigation.navigate("Favoritos")}
+            onAbrirPedidos={onAbrirPedidos}
+            onAbrirChat={onAbrirChat}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Favoritos">
+        {({ navigation }) => (
+          <FavoritosScreen
+            onVoltar={() => navigation.goBack()}
+            onVerPerfil={(autonomoId) => navigation.navigate("PerfilProfissional", { autonomoId })}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="PerfilProfissional">
+        {({ navigation, route }) => (
+          <ProfessionalProfileScreen
+            autonomoId={route.params.autonomoId}
+            onVoltar={() => navigation.goBack()}
+            onPedirOrcamento={() => {}}
+            onPrecisaEntrar={() => {}}
           />
         )}
       </Stack.Screen>

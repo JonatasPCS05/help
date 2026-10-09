@@ -28,9 +28,12 @@ interface Props {
   nomeOutraParte?: string;
   categoria?: string;
   onVoltar: () => void;
+  // Ver ChatListScreen.tsx -- renderizado ao lado da lista, sem o
+  // SafeAreaView/cabeçalho de "Voltar" de tela cheia.
+  embutido?: boolean;
 }
 
-export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar }: Props) {
+export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar, embutido }: Props) {
   const { usuario } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
@@ -83,13 +86,14 @@ export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar 
     }
   }
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ResponsiveContent style={styles.conteudo}>
+  const corpo = (
+    <>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onVoltar}>
-            <Text style={styles.voltar}>{"< Voltar"}</Text>
-          </TouchableOpacity>
+          {!embutido && (
+            <TouchableOpacity onPress={onVoltar}>
+              <Text style={styles.voltar}>{"< Voltar"}</Text>
+            </TouchableOpacity>
+          )}
           <View>
             <Text style={styles.headerNome}>{nomeOutraParte ?? "Conversa"}</Text>
             {categoria && <Text style={styles.headerCategoria}>{categoria} · sobre este pedido</Text>}
@@ -143,7 +147,16 @@ export function ChatScreen({ solicitacaoId, nomeOutraParte, categoria, onVoltar 
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </ResponsiveContent>
+    </>
+  );
+
+  if (embutido) {
+    return <View style={styles.containerEmbutido}>{corpo}</View>;
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ResponsiveContent style={styles.conteudo}>{corpo}</ResponsiveContent>
     </SafeAreaView>
   );
 }
@@ -152,6 +165,7 @@ function criarStyles(colors: Colors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas },
   conteudo: { paddingHorizontal: spacing.lg },
+  containerEmbutido: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
   voltar: { color: colors.primary, fontWeight: "600" },
   headerNome: { fontSize: 16, fontWeight: "700", color: colors.ink },
