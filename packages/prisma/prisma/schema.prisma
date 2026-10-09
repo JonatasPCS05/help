@@ -100,6 +100,7 @@ model Usuario {
   solicitacoesAutonomo          SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoUsuario")
   solicitacoesAutonomoAnalises  SolicitacaoAutonomo[] @relation("SolicitacaoAutonomoAnalista")
   solicitacoesRecusadas         SolicitacaoRecusa[]
+  favoritos                     Favorito[]
 
   @@map("usuarios")
 }
@@ -147,23 +148,53 @@ model PerfilAutonomo {
   online              Boolean         @default(false)
   latitudeAtual       Decimal?        @map("latitude_atual") @db.Decimal(10, 7)
   longitudeAtual      Decimal?        @map("longitude_atual") @db.Decimal(10, 7)
+  bio                 String?
   criadoEm            DateTime        @default(now()) @map("criado_em") @db.Timestamptz(6)
 
-  usuario    Usuario              @relation(fields: [usuarioId], references: [id])
+  usuario    Usuario               @relation(fields: [usuarioId], references: [id])
   categorias AutonomoCategoria[]
+  fotos      PerfilAutonomoFoto[]
+  favoritadoPor Favorito[]
 
   @@map("perfis_autonomos")
 }
 
 model AutonomoCategoria {
-  autonomoId  String @map("autonomo_id") @db.Uuid
-  categoriaId String @map("categoria_id") @db.Uuid
+  autonomoId  String   @map("autonomo_id") @db.Uuid
+  categoriaId String   @map("categoria_id") @db.Uuid
+  precoBase   Decimal? @map("preco_base") @db.Decimal(10, 2)
 
   autonomo  PerfilAutonomo @relation(fields: [autonomoId], references: [id])
   categoria Categoria      @relation(fields: [categoriaId], references: [id])
 
   @@id([autonomoId, categoriaId])
   @@map("autonomo_categorias")
+}
+
+// Portfólio de fotos do profissional (perfil público) — mesmo padrão de
+// SolicitacaoFoto, só que ligado ao perfil, não a um pedido específico.
+model PerfilAutonomoFoto {
+  id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfilAutonomoId String @map("perfil_autonomo_id") @db.Uuid
+  url              String
+
+  perfilAutonomo PerfilAutonomo @relation(fields: [perfilAutonomoId], references: [id])
+
+  @@map("perfil_autonomo_fotos")
+}
+
+// Profissionais salvos/favoritados por um cliente, pro painel "Favoritos".
+model Favorito {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId  String   @map("cliente_id") @db.Uuid
+  autonomoId String   @map("autonomo_id") @db.Uuid
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  cliente  Usuario        @relation(fields: [clienteId], references: [id])
+  autonomo PerfilAutonomo @relation(fields: [autonomoId], references: [id])
+
+  @@unique([clienteId, autonomoId])
+  @@map("favoritos")
 }
 
 model Solicitacao {

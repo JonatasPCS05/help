@@ -82,6 +82,36 @@ avaliacoesRouter.get("/usuario/:usuarioId", async (req, res, next) => {
   }
 });
 
+// Breakdown por estrela (1-5) pro gráfico de barras do perfil público —
+// mesmos registros de Avaliacao usados em GET /usuario/:id, só agregados.
+avaliacoesRouter.get("/usuario/:usuarioId/resumo", async (req, res, next) => {
+  try {
+    const contagens = await prisma.avaliacao.groupBy({
+      by: ["nota"],
+      where: { avaliadoId: req.params.usuarioId },
+      _count: { nota: true },
+    });
+
+    const porEstrela: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const linha of contagens) {
+      porEstrela[linha.nota] = linha._count.nota;
+    }
+    const total = Object.values(porEstrela).reduce((soma, qtd) => soma + qtd, 0);
+
+    res.json({
+      total,
+      porEstrela: Object.fromEntries(
+        Object.entries(porEstrela).map(([nota, qtd]) => [
+          nota,
+          { quantidade: qtd, percentual: total > 0 ? Math.round((qtd / total) * 100) : 0 },
+        ])
+      ),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 async function recalcularMedia(usuarioId: string, papel: "cliente" | "autonomo") {
   const agregada = await prisma.avaliacao.aggregate({
     where: { avaliadoId: usuarioId },

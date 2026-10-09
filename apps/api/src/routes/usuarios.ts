@@ -281,6 +281,74 @@ usuariosRouter.put("/me/autonomo/categorias", async (req, res, next) => {
   }
 });
 
+const precoCategoriaSchema = z.object({ precoBase: z.number().positive().nullable() });
+
+// Preço "a partir de" por categoria atendida, pro perfil público — rota
+// separada de PUT /me/autonomo/categorias pra não mexer no contrato já
+// usado pela tela de seleção de categorias.
+usuariosRouter.patch("/me/autonomo/categorias/:categoriaId/preco", async (req, res, next) => {
+  try {
+    const perfil = await getPerfilAutonomoAtivo(req.user!.sub);
+    const { precoBase } = precoCategoriaSchema.parse(req.body);
+
+    const vinculo = await prisma.autonomoCategoria.findUnique({
+      where: { autonomoId_categoriaId: { autonomoId: perfil.id, categoriaId: req.params.categoriaId } },
+    });
+    if (!vinculo) {
+      throw new ApiHttpError(404, "categoria_nao_atendida", "Você não atende essa categoria");
+    }
+
+    const atualizado = await prisma.autonomoCategoria.update({
+      where: { autonomoId_categoriaId: { autonomoId: perfil.id, categoriaId: req.params.categoriaId } },
+      data: { precoBase },
+      include: { categoria: true },
+    });
+    res.json(atualizado);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const bioSchema = z.object({ bio: z.string().max(1000).nullable() });
+
+usuariosRouter.patch("/me/autonomo/bio", async (req, res, next) => {
+  try {
+    const perfil = await getPerfilAutonomoAtivo(req.user!.sub);
+    const { bio } = bioSchema.parse(req.body);
+
+    const atualizado = await prisma.perfilAutonomo.update({ where: { id: perfil.id }, data: { bio } });
+    res.json(atualizado);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const fotoPortfolioSchema = z.object({ url: z.string().url() });
+
+usuariosRouter.post("/me/autonomo/fotos", async (req, res, next) => {
+  try {
+    const perfil = await getPerfilAutonomoAtivo(req.user!.sub);
+    const { url } = fotoPortfolioSchema.parse(req.body);
+
+    const foto = await prisma.perfilAutonomoFoto.create({ data: { perfilAutonomoId: perfil.id, url } });
+    res.status(201).json(foto);
+  } catch (error) {
+    next(error);
+  }
+});
+
+usuariosRouter.delete("/me/autonomo/fotos/:fotoId", async (req, res, next) => {
+  try {
+    const perfil = await getPerfilAutonomoAtivo(req.user!.sub);
+    await prisma.perfilAutonomoFoto.deleteMany({
+      where: { id: req.params.fotoId, perfilAutonomoId: perfil.id },
+    });
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 const statusOnlineSchema = z.object({ online: z.boolean() });
 
 usuariosRouter.patch("/me/autonomo/status", async (req, res, next) => {

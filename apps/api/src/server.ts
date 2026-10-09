@@ -15,6 +15,8 @@ import { cancelamentosRouter } from "./routes/cancelamentos";
 import { notificacoesRouter } from "./routes/notificacoes";
 import { chatRouter } from "./routes/chat";
 import { adminRouter } from "./routes/admin";
+import { publicoRouter } from "./routes/publico";
+import { favoritosRouter } from "./routes/favoritos";
 import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads";
 import { stoneWebhookRouter } from "./webhooks/stone";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
@@ -44,6 +46,8 @@ app.use("/cancelamentos", cancelamentosRouter);
 app.use("/notificacoes", notificacoesRouter);
 app.use("/chat", chatRouter);
 app.use("/admin", adminRouter);
+app.use("/publico", publicoRouter);
+app.use("/favoritos", favoritosRouter);
 app.use("/uploads", express.static(UPLOADS_DIR));
 app.use("/uploads", uploadsRouter);
 
