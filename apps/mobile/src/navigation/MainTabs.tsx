@@ -44,10 +44,10 @@ function telasDisponiveis(modo: "cliente" | "autonomo"): string[] {
     : ["Home", "Orders", "Chat", "Profile"];
 }
 
-function renderizarTela(chave: string) {
+function renderizarTela(chave: string, onTrocarAba: (chave: string) => void) {
   switch (chave) {
     case "Home":
-      return <HomeStack />;
+      return <HomeStack onAbrirPedidos={() => onTrocarAba("Orders")} onAbrirChat={() => onTrocarAba("Chat")} />;
     case "Recebidos":
       return <RecebidosStack />;
     case "Orders":
@@ -78,7 +78,7 @@ function DesktopShell() {
   return (
     <View style={styles.desktopContainer}>
       <AppSidebar itens={itens} ativo={telaAtiva} onSelecionar={setTelaAtiva} />
-      <View style={styles.desktopContent}>{renderizarTela(telaAtiva)}</View>
+      <View style={styles.desktopContent}>{renderizarTela(telaAtiva, setTelaAtiva)}</View>
     </View>
   );
 }
@@ -97,7 +97,14 @@ function MobileTabs() {
         tabBarIcon: ({ color, size }) => <Ionicons name={ICONS[route.name]} size={size} color={color} />,
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} options={{ title: "Home" }} />
+      <Tab.Screen name="Home" options={{ title: "Home" }}>
+        {({ navigation }) => (
+          <HomeStack
+            onAbrirPedidos={() => navigation.navigate(modo === "autonomo" ? "Trabalhos" : "Orders")}
+            onAbrirChat={() => navigation.navigate("Chat")}
+          />
+        )}
+      </Tab.Screen>
       {modo === "autonomo" && (
         <Tab.Screen name="Recebidos" component={RecebidosStack} options={{ title: "Recebidos" }} />
       )}

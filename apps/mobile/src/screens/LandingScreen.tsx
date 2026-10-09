@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { radius, spacing, type Colors } from "@/theme";
 import { useTheme } from "@/context/ThemeContext";
 import { ProfessionalDirectoryCard, type ProfissionalResumo } from "@/components/ProfessionalDirectoryCard";
+import { ICONE_POR_CATEGORIA, ICONE_CATEGORIA_PADRAO } from "@/lib/categoriaIcones";
 
 interface Props {
   onEntrar: () => void;
@@ -38,21 +39,6 @@ interface Categoria {
   id: string;
   nome: string;
 }
-
-const ICONE_POR_CATEGORIA: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Jardineiro: "leaf-outline",
-  Piscineiro: "water-outline",
-  Pedreiro: "hammer-outline",
-  Eletricista: "flash-outline",
-  Encanador: "build-outline",
-  Pintor: "color-palette-outline",
-  Diarista: "home-outline",
-  "Montador de Móveis": "cube-outline",
-  "Técnico de Ar-condicionado": "snow-outline",
-  Chaveiro: "key-outline",
-  "Pequenos Reparos": "construct-outline",
-};
-const ICONE_CATEGORIA_PADRAO: keyof typeof Ionicons.glyphMap = "construct-outline";
 
 export function LandingScreen({ onEntrar, onCriarConta, onParaProfissionais, onBuscar, onVerPerfilProfissional }: Props) {
   const { isWide } = useResponsive();
