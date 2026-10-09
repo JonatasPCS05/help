@@ -20,8 +20,8 @@ chatRouter.get("/conversas", async (req, res, next) => {
       },
       include: {
         categoria: true,
-        cliente: { select: { id: true, nome: true } },
-        autonomo: { select: { id: true, nome: true } },
+        cliente: { select: { id: true, nome: true, fotoUrl: true } },
+        autonomo: { select: { id: true, nome: true, fotoUrl: true } },
         mensagens: { orderBy: { criadoEm: "desc" }, take: 1 },
       },
     });

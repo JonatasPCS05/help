@@ -11,6 +11,8 @@ import { ResponsiveContent } from "@/components/ResponsiveContent";
 import { RelogioAnimado } from "@/components/RelogioAnimado";
 import { AvaliacaoBadge } from "@/components/AvaliacaoBadge";
 import { AvaliacoesModal } from "@/components/AvaliacoesModal";
+import { OrderProgressStepper } from "@/components/OrderProgressStepper";
+import { ICONE_POR_CATEGORIA, ICONE_CATEGORIA_PADRAO } from "@/lib/categoriaIcones";
 
 interface Solicitacao {
   id: string;
@@ -81,17 +83,32 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
 
   const filtradas = solicitacoes.filter((s) => abaAtiva.status.includes(s.status));
 
+  // Pra desenhar o stepper em cada card, precisamos saber em qual das 4
+  // abas o status atual dele cai -- não só o da aba selecionada no momento.
+  function abaDoStatus(status: string) {
+    return abas.find((a) => a.status.includes(status)) ?? abas[0];
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ResponsiveContent>
         <Text style={styles.titulo}>{papel === "autonomo" ? "Meus Trabalhos" : "Meus Pedidos"}</Text>
 
-        <View style={styles.abas}>
-          {abas.map((aba) => (
-            <TouchableOpacity key={aba.chave} onPress={() => setAbaAtiva(aba)}>
-              <Text style={[styles.aba, abaAtiva.chave === aba.chave && styles.abaAtiva]}>{aba.label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.statsGrade}>
+          {abas.map((aba) => {
+            const quantidade = solicitacoes.filter((s) => aba.status.includes(s.status)).length;
+            const ativa = abaAtiva.chave === aba.chave;
+            return (
+              <TouchableOpacity
+                key={aba.chave}
+                style={[styles.statCard, ativa && styles.statCardAtivo]}
+                onPress={() => setAbaAtiva(aba)}
+              >
+                <Text style={[styles.statNumero, ativa && styles.statNumeroAtivo]}>{quantidade}</Text>
+                <Text style={[styles.statLabel, ativa && styles.statLabelAtivo]}>{aba.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <FlatList
@@ -116,7 +133,16 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
             return (
               <TouchableOpacity style={styles.card} onPress={() => onAbrirSolicitacao(item.id)}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.badge}>{item.categoria.nome}</Text>
+                  <View style={styles.cabecalhoEsquerda}>
+                    <View style={styles.thumbnail}>
+                      <Ionicons
+                        name={ICONE_POR_CATEGORIA[item.categoria.nome] ?? ICONE_CATEGORIA_PADRAO}
+                        size={16}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <Text style={styles.badge}>{item.categoria.nome}</Text>
+                  </View>
                   <Text style={styles.statusTexto}>{labelStatus(item.status)}</Text>
                 </View>
                 <Text style={styles.descricao} numberOfLines={2}>
@@ -140,6 +166,10 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
                 ) : (
                   preferencia && <Text style={styles.infoExtra}>Preferência do cliente: {preferencia}</Text>
                 )}
+
+                <View style={styles.stepperContainer}>
+                  <OrderProgressStepper etapas={abas} chaveAtiva={abaDoStatus(item.status).chave} />
+                </View>
 
                 {item.status === "concluido" && outraParte ? (
                   <TouchableOpacity
@@ -182,12 +212,25 @@ export function OrdersScreen({ papel = "cliente", onAbrirSolicitacao }: Props) {
 function criarStyles(colors: Colors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
-  titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
-  abas: { flexDirection: "row", gap: spacing.md, marginTop: spacing.md, flexWrap: "wrap" },
-  aba: { color: colors.muted, fontWeight: "600", paddingBottom: spacing.xs },
-  abaAtiva: { color: colors.primary, borderBottomWidth: 2, borderBottomColor: colors.primary },
-  card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
+  titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md, marginBottom: spacing.md },
+  statsGrade: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  statCard: { flex: 1, minWidth: 130, backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.sm, alignItems: "center" },
+  statCardAtivo: { backgroundColor: colors.primaryLight },
+  statNumero: { fontSize: 20, fontWeight: "700", color: colors.ink },
+  statNumeroAtivo: { color: colors.primary },
+  statLabel: { fontSize: 11, color: colors.muted, textAlign: "center", marginTop: 2 },
+  statLabelAtivo: { color: colors.primaryDark, fontWeight: "600" },
+  card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
+  cabecalhoEsquerda: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  thumbnail: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   badge: {
     alignSelf: "flex-start",
     backgroundColor: colors.secondaryLight,
@@ -198,17 +241,13 @@ function criarStyles(colors: Colors) {
     paddingVertical: 2,
     borderRadius: radius.full,
   },
+  stepperContainer: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: 2 },
   statusTexto: { color: colors.primary, fontSize: 12, fontWeight: "700" },
   descricao: { color: colors.ink },
   infoExtra: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
   infoExtraLinha: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.xs },
   semMargemTopo: { marginTop: 0 },
-  proximoPassoLinha: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  proximoPassoLinha: { marginTop: spacing.xs },
   proximoPassoComIcone: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   proximoPassoTexto: { color: colors.primary, fontSize: 12.5, fontWeight: "700" },
   vazio: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },

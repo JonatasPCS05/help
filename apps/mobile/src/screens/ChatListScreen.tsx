@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiFetch } from "@/lib/api";
@@ -13,7 +13,7 @@ interface Conversa {
   solicitacaoId: string;
   categoria: string;
   status: string;
-  outraParte: { id: string; nome: string } | null;
+  outraParte: { id: string; nome: string; fotoUrl: string | null } | null;
   ultimaMensagem: string | null;
   ultimaMensagemEm: string;
   ultimaMensagemDe: string | null;
@@ -76,17 +76,28 @@ export function ChatListScreen({ onAbrirConversa }: Props) {
               style={styles.card}
               onPress={() => onAbrirConversa(item.solicitacaoId, item.outraParte?.nome, item.categoria)}
             >
-              <View style={styles.linha}>
-                <View style={styles.nomeLinha}>
-                  {naoLidas[item.solicitacaoId] && <View style={styles.pontoNaoLido} />}
-                  <Text style={styles.nome}>{item.outraParte?.nome ?? "Usuário"}</Text>
+              <View style={styles.linhaPrincipal}>
+                {item.outraParte?.fotoUrl ? (
+                  <Image source={{ uri: item.outraParte.fotoUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarFallbackTexto}>{(item.outraParte?.nome ?? "?")[0]?.toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.linha}>
+                    <View style={styles.nomeLinha}>
+                      {naoLidas[item.solicitacaoId] && <View style={styles.pontoNaoLido} />}
+                      <Text style={styles.nome}>{item.outraParte?.nome ?? "Usuário"}</Text>
+                    </View>
+                    <Text style={styles.data}>{formatarData(item.ultimaMensagemEm)}</Text>
+                  </View>
+                  <Text style={styles.badge}>{item.categoria}</Text>
+                  <Text style={[styles.preview, naoLidas[item.solicitacaoId] && styles.previewNaoLida]} numberOfLines={1}>
+                    {item.ultimaMensagem ?? "Nenhuma mensagem ainda — diga olá!"}
+                  </Text>
                 </View>
-                <Text style={styles.data}>{formatarData(item.ultimaMensagemEm)}</Text>
               </View>
-              <Text style={styles.badge}>{item.categoria}</Text>
-              <Text style={[styles.preview, naoLidas[item.solicitacaoId] && styles.previewNaoLida]} numberOfLines={1}>
-                {item.ultimaMensagem ?? "Nenhuma mensagem ainda — diga olá!"}
-              </Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
@@ -107,6 +118,17 @@ function criarStyles(colors: Colors) {
   container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
   titulo: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: spacing.md },
   card: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md },
+  linhaPrincipal: { flexDirection: "row", gap: spacing.sm },
+  avatar: { width: 44, height: 44, borderRadius: radius.full },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarFallbackTexto: { color: colors.primary, fontWeight: "700", fontSize: 16 },
   linha: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   nomeLinha: { flexDirection: "row", alignItems: "center", gap: 6 },
   pontoNaoLido: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.secondary },

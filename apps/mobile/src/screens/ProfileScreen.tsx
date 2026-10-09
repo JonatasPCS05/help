@@ -176,14 +176,26 @@ export function ProfileScreen({ onTornarAutonomo, onEditarPerfil, onAbrirHistori
         </View>
 
         <View style={styles.menu}>
-          <TouchableOpacity onPress={onEditarPerfil}>
-            <Text style={styles.menuItem}>Editar Perfil</Text>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onEditarPerfil}>
+            <View style={styles.menuItemEsquerda}>
+              <Ionicons name="person-outline" size={17} color={colors.primary} />
+              <Text style={styles.menuItemTexto}>Editar Perfil</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onAbrirHistorico}>
-            <Text style={styles.menuItem}>Histórico</Text>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onAbrirHistorico}>
+            <View style={styles.menuItemEsquerda}>
+              <Ionicons name="time-outline" size={17} color={colors.primary} />
+              <Text style={styles.menuItemTexto}>Histórico</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onAbrirPagamentos}>
-            <Text style={styles.menuItem}>Pagamentos</Text>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemLinha]} onPress={onAbrirPagamentos}>
+            <View style={styles.menuItemEsquerda}>
+              <Ionicons name="card-outline" size={17} color={colors.primary} />
+              <Text style={styles.menuItemTexto}>Pagamentos</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </TouchableOpacity>
           <View style={[styles.menuItem, styles.menuItemUltimo, styles.temaLinha]}>
             <View style={styles.temaLabelLinha}>
@@ -321,9 +333,10 @@ function criarStyles(colors: Colors) {
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    color: colors.ink,
-    fontWeight: "600",
   },
+  menuItemLinha: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  menuItemEsquerda: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  menuItemTexto: { color: colors.ink, fontWeight: "600" },
   menuItemUltimo: { borderBottomWidth: 0 },
   temaLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   temaLabelLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
@@ -369,7 +382,7 @@ function criarStyles(colors: Colors) {
   botaoSalvarCategorias: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.sm, alignItems: "center" },
   botaoSalvarCategoriasTexto: { color: colors.white, fontWeight: "700", fontSize: 13 },
   ctaCard: { backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.lg },
-  cta: { backgroundColor: colors.secondary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: "center" },
+  cta: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: "center" },
   ctaTexto: { color: colors.white, fontWeight: "700" },
   ctaSubtitulo: { color: colors.muted, marginTop: spacing.sm, fontSize: 12 },
   sair: { marginTop: spacing.lg, alignItems: "center", paddingVertical: spacing.md },
