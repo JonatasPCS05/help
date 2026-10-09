@@ -109,7 +109,32 @@ publicoRouter.get("/autonomos/:id", async (req, res, next) => {
       throw new ApiHttpError(404, "autonomo_nao_encontrado", "Profissional não encontrado");
     }
 
-    const totalAvaliacoes = await prisma.avaliacao.count({ where: { avaliadoId: autonomo.usuarioId } });
+    const contagensPorNota = await prisma.avaliacao.groupBy({
+      by: ["nota"],
+      where: { avaliadoId: autonomo.usuarioId },
+      _count: { nota: true },
+    });
+    const porEstrela: Record<number, { quantidade: number; percentual: number }> = {
+      1: { quantidade: 0, percentual: 0 },
+      2: { quantidade: 0, percentual: 0 },
+      3: { quantidade: 0, percentual: 0 },
+      4: { quantidade: 0, percentual: 0 },
+      5: { quantidade: 0, percentual: 0 },
+    };
+    const totalAvaliacoes = contagensPorNota.reduce((soma, linha) => soma + linha._count.nota, 0);
+    for (const linha of contagensPorNota) {
+      porEstrela[linha.nota] = {
+        quantidade: linha._count.nota,
+        percentual: totalAvaliacoes > 0 ? Math.round((linha._count.nota / totalAvaliacoes) * 100) : 0,
+      };
+    }
+
+    const avaliacoesRecentes = await prisma.avaliacao.findMany({
+      where: { avaliadoId: autonomo.usuarioId },
+      orderBy: { criadoEm: "desc" },
+      take: 20,
+      select: { id: true, nota: true, comentario: true, criadoEm: true, avaliador: { select: { nome: true } } },
+    });
 
     const regiao =
       autonomo.latitudeAtual && autonomo.longitudeAtual
@@ -123,6 +148,8 @@ publicoRouter.get("/autonomos/:id", async (req, res, next) => {
       online: autonomo.online,
       avaliacaoMedia: autonomo.usuario.avaliacaoMediaAutonomo,
       totalAvaliacoes,
+      porEstrela,
+      avaliacoesRecentes,
       categorias: autonomo.categorias.map((c) => ({ nome: c.categoria.nome, precoBase: c.precoBase })),
       fotos: autonomo.fotos.map((f) => f.url),
       regiaoAtendida: regiao ? `${regiao.cidade}, ${regiao.estado}` : null,

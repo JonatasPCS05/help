@@ -13,12 +13,14 @@ import {
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { LandingScreen } from "@/screens/LandingScreen";
-import { LoginScreen } from "@/screens/LoginScreen";
-import { RegisterScreen } from "@/screens/RegisterScreen";
+import { LandingProfissionalScreen } from "@/screens/LandingProfissionalScreen";
+import { BrowseProfessionalsScreen } from "@/screens/BrowseProfessionalsScreen";
+import { ProfessionalProfileScreen } from "@/screens/ProfessionalProfileScreen";
 import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 import { MainTabs } from "@/navigation/MainTabs";
 import { ConfirmModalHost } from "@/components/ConfirmModal";
+import { AuthModal } from "@/components/AuthModal";
 
 // Nomes de rota (não o `options.title` da aba) é o que o React Navigation
 // usa por padrão pro <title> da aba do navegador — por isso aparecia
@@ -34,12 +36,23 @@ const TITULOS_ROTA: Record<string, string> = {
   Profile: "Perfil · HelpMate",
 };
 
+type TelaPublica =
+  | "landing"
+  | "landing-profissional"
+  | "busca-profissionais"
+  | "perfil-profissional"
+  | "esqueci-senha"
+  | "resetar-senha";
+
 function Root() {
   const { usuario, carregando } = useAuth();
   const { colors } = useTheme();
-  const [tela, setTela] = useState<"landing" | "login" | "registro" | "esqueci-senha" | "resetar-senha">("landing");
+  const [tela, setTela] = useState<TelaPublica>("landing");
+  const [buscaLocalizacao, setBuscaLocalizacao] = useState("");
+  const [perfilSelecionadoId, setPerfilSelecionadoId] = useState<string | null>(null);
   const [emailReset, setEmailReset] = useState("");
   const [tokenReset, setTokenReset] = useState<string | undefined>(undefined);
+  const [authModal, setAuthModal] = useState<"login" | "registro" | null>(null);
 
   if (carregando) {
     return (
@@ -53,18 +66,22 @@ function Root() {
     return <MainTabs />;
   }
 
-  if (tela === "landing") {
-    return <LandingScreen onEntrar={() => setTela("login")} />;
-  }
-
-  if (tela === "registro") {
-    return <RegisterScreen onVoltarLogin={() => setTela("login")} />;
-  }
+  const modalDeAutenticacao = (
+    <AuthModal
+      visivel={authModal !== null}
+      modoInicial={authModal ?? "login"}
+      onFechar={() => setAuthModal(null)}
+      onEsqueciSenha={() => setTela("esqueci-senha")}
+    />
+  );
 
   if (tela === "esqueci-senha") {
     return (
       <ForgotPasswordScreen
-        onVoltarLogin={() => setTela("login")}
+        onVoltarLogin={() => {
+          setTela("landing");
+          setAuthModal("login");
+        }}
         onEnviado={(email, devToken) => {
           setEmailReset(email);
           setTokenReset(devToken);
@@ -79,13 +96,72 @@ function Root() {
       <ResetPasswordScreen
         email={emailReset}
         tokenInicial={tokenReset}
-        onConcluido={() => setTela("login")}
+        onConcluido={() => {
+          setTela("landing");
+          setAuthModal("login");
+        }}
         onVoltar={() => setTela("esqueci-senha")}
       />
     );
   }
 
-  return <LoginScreen onCriarConta={() => setTela("registro")} onEsqueciSenha={() => setTela("esqueci-senha")} />;
+  if (tela === "landing-profissional") {
+    return (
+      <>
+        <LandingProfissionalScreen onVoltar={() => setTela("landing")} onCriarPerfil={() => setAuthModal("registro")} />
+        {modalDeAutenticacao}
+      </>
+    );
+  }
+
+  if (tela === "busca-profissionais") {
+    return (
+      <>
+        <BrowseProfessionalsScreen
+          localizacaoInicial={buscaLocalizacao}
+          onVoltar={() => setTela("landing")}
+          onVerPerfil={(id) => {
+            setPerfilSelecionadoId(id);
+            setTela("perfil-profissional");
+          }}
+        />
+        {modalDeAutenticacao}
+      </>
+    );
+  }
+
+  if (tela === "perfil-profissional" && perfilSelecionadoId) {
+    return (
+      <>
+        <ProfessionalProfileScreen
+          autonomoId={perfilSelecionadoId}
+          onVoltar={() => setTela("busca-profissionais")}
+          onPedirOrcamento={() => setAuthModal("login")}
+          onPrecisaEntrar={() => setAuthModal("login")}
+        />
+        {modalDeAutenticacao}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <LandingScreen
+        onEntrar={() => setAuthModal("login")}
+        onCriarConta={() => setAuthModal("registro")}
+        onParaProfissionais={() => setTela("landing-profissional")}
+        onBuscar={(localizacao) => {
+          setBuscaLocalizacao(localizacao);
+          setTela("busca-profissionais");
+        }}
+        onVerPerfilProfissional={(id) => {
+          setPerfilSelecionadoId(id);
+          setTela("perfil-profissional");
+        }}
+      />
+      {modalDeAutenticacao}
+    </>
+  );
 }
 
 function BarraDeStatus() {

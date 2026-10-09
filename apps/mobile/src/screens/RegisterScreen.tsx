@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +9,14 @@ import { useTheme } from "@/context/ThemeContext";
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-export function RegisterScreen({ onVoltarLogin }: { onVoltarLogin: () => void }) {
+interface Props {
+  onVoltarLogin: () => void;
+  // Ver LoginScreen.tsx — mesma ideia, pula o envoltório de tela cheia
+  // quando renderizado dentro do AuthModal.
+  semEnvoltorio?: boolean;
+}
+
+export function RegisterScreen({ onVoltarLogin, semEnvoltorio }: Props) {
   const { registrar } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
@@ -58,8 +65,11 @@ export function RegisterScreen({ onVoltarLogin }: { onVoltarLogin: () => void })
     }
   }
 
+  const Envoltorio = semEnvoltorio ? Fragment : SafeAreaView;
+  const propsEnvoltorio = semEnvoltorio ? {} : { style: styles.container };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <Envoltorio {...propsEnvoltorio}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.logo}>
@@ -142,7 +152,7 @@ export function RegisterScreen({ onVoltarLogin }: { onVoltarLogin: () => void })
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </Envoltorio>
   );
 }
 

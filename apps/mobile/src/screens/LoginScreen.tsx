@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +8,16 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { radius, spacing, type Colors } from "@/theme";
 import { useTheme } from "@/context/ThemeContext";
 
-export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: () => void; onEsqueciSenha: () => void }) {
+interface Props {
+  onCriarConta: () => void;
+  onEsqueciSenha: () => void;
+  // true quando renderizado dentro do AuthModal (sobre a landing) — pula
+  // o SafeAreaView/fundo de tela cheia, já que quem centraliza o cartão
+  // nesse caso é o próprio modal.
+  semEnvoltorio?: boolean;
+}
+
+export function LoginScreen({ onCriarConta, onEsqueciSenha, semEnvoltorio }: Props) {
   const { entrar, entrarComGoogle } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => criarStyles(colors), [colors]);
@@ -50,9 +59,12 @@ export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: ()
     }
   }
 
+  const Envoltorio = semEnvoltorio ? Fragment : SafeAreaView;
+  const propsEnvoltorio = semEnvoltorio ? {} : { style: styles.container };
+
   if (googleIdToken) {
     return (
-      <SafeAreaView style={styles.container}>
+      <Envoltorio {...propsEnvoltorio}>
         <View style={styles.card}>
           <Text style={styles.title}>Quase lá!</Text>
           <Text style={styles.subtitle}>Precisamos do seu CPF pra concluir o cadastro.</Text>
@@ -78,12 +90,12 @@ export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: ()
             <Text style={styles.rodape}>Cancelar</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </Envoltorio>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Envoltorio {...propsEnvoltorio}>
       <View style={styles.card}>
         <View style={styles.logo}>
           <Text style={styles.logoText}>H</Text>
@@ -152,7 +164,7 @@ export function LoginScreen({ onCriarConta, onEsqueciSenha }: { onCriarConta: ()
           <Text style={styles.rodape}>Ainda não tem conta? Criar conta</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </Envoltorio>
   );
 }
 
