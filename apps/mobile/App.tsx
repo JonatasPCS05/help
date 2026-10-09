@@ -3,6 +3,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { LandingScreen } from "@/screens/LandingScreen";
@@ -87,6 +94,25 @@ function BarraDeStatus() {
 }
 
 export default function App() {
+  const [fontesCarregadas] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  // Fontes de peso específico (Inter) só são usadas pelas telas novas do
+  // redesign a partir daqui — nada que já existia depende delas, então dá
+  // pra liberar a UI assim que carregar, sem travar o app em caso de falha
+  // de rede na primeira abertura (o texto só cai pra fonte padrão do SO).
+  if (!fontesCarregadas) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8FAF9" }}>
+        <ActivityIndicator color="#168A43" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
