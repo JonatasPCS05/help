@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
@@ -168,6 +168,7 @@ export function ProfileScreen({
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView contentContainerStyle={styles.scroll}>
       <ResponsiveContent>
         <View style={styles.header}>
           <View style={styles.avatar}>
@@ -359,13 +360,15 @@ export function ProfileScreen({
           <Text style={styles.sairTexto}>Sair</Text>
         </TouchableOpacity>
       </ResponsiveContent>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 function criarStyles(colors: Colors) {
   return StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.canvas },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   header: { alignItems: "center", marginTop: spacing.lg, marginBottom: spacing.lg },
   avatar: {
     width: 72,
